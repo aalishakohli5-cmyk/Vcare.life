@@ -1,0 +1,57 @@
+html, body {
+  margin  : 0;
+  padding : 0;
+}
+
+*,
+::after,
+::before {
+  margin       : 0;
+  padding      : 0;
+  color        : inherit;
+  box-sizing   : border-box;
+  border       : 0 solid;
+  font-family  : sans-serif;
+  font-display : swap;
+}
+
+table {
+  text-indent     : 0;
+  border-color    : inherit;
+  border-collapse : collapse;
+}
+
+th, td {
+  padding    : 0;
+  text-align : inherit;
+}
+
+th {
+  font-weight: bold;
+}
+
+h1, h2, h3,
+h4, h5, h6 {
+  font-size   : inherit;
+  font-weight : inherit;
+}
+
+ol, ul, menu, summary {
+  list-style: none
+}
+
+a {
+  text-decoration: none
+}
+
+img,    svg,   video,
+canvas, audio, iframe,
+embed,  object {
+  display        : inline-block;
+  vertical-align : middle;
+}
+
+img, video {
+  max-width : 100%;
+  height    : auto;
+}

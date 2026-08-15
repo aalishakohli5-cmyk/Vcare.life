@@ -1,0 +1,6 @@
+@import 'preflight.css';
+
+.page {
+  display         : flex;
+  justify-content : center;
+}

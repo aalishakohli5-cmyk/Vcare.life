@@ -1,0 +1,34 @@
+.navbar {
+  position        : fixed;
+  background      : black;
+  bottom          : 0em;
+  width           : 100%;
+  height          : 3.5rem;
+  justify-content : center;
+  align-items     : center;
+  .container {
+    display         : flex;
+    align-items     : center;
+    justify-content : space-between;
+    height          : 100%;
+  }
+  .navbar__tab {
+    display         : flex;
+    flex-direction  : column;
+    align-items     : center;
+    justify-content : center;
+    color           : white;
+    opacity         : 0.5;
+  }
+  .navbar__tab--active {
+    opacity: 1;
+  }
+  .tab__icon {
+    width  : 28px;
+    height : 28px;
+  }
+  .tab__title {
+    margin-top : 2px;
+    font-size  : 12px;
+  }
+}
