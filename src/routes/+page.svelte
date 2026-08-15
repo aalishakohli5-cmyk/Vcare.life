@@ -106,7 +106,8 @@
 
 
         <!-- CAREGIVER -->
-        <a href="/caregiver" class="role-card caregiver">
+       <a href="/auth?role=caregiver" class="role-card caregiver">
+
 
           <div class="role-icon">
             👥
@@ -134,7 +135,7 @@
 
 
         <!-- SENIOR -->
-        <a href="/senior" class="role-card senior">
+        <a href="/auth?role=senior" class="role-card senior">
 
           <div class="role-icon senior-heart">
             ♡
