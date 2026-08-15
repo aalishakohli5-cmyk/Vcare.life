@@ -1,6 +1,8 @@
 <script>
+
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
+  import { supabase } from '$lib/supabase';
 
   let email = '';
   let password = '';
@@ -35,17 +37,20 @@
     }
   }
 
-  function continueWithGoogle() {
-    /*
-      IMPORTANT:
-      Google authentication is NOT connected yet.
+ async function continueWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: `${window.location.origin}/auth/callback?role=${role}`
+        }
+    });
 
-      We will replace this with real Google OAuth
-      in the next authentication step.
-    */
+    if (error) {
+        console.error(error);
+        alert('Google sign-in failed. Please try again.');
+    }
+}
 
-    alert('Google Sign-In will be connected next.');
-  }
 </script>
 
 

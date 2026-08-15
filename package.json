@@ -21,5 +21,8 @@
 		"typescript": "^6.0.3",
 		"unocss": "^66.7.5",
 		"vite": "^8.0.16"
+	},
+	"dependencies": {
+		"@supabase/supabase-js": "^2.112.3"
 	}
 }
