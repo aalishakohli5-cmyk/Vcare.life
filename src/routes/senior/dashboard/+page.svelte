@@ -310,14 +310,15 @@ if (!pendingMedicine) {
 			</a>
 
 
-			<button class="nav-link">
-				<span class="nav-icon">✚</span>
+			<a href="/senior/medications" class="nav-link">
+    <span class="nav-icon">✚</span>
 
-				<div>
-					<strong>Medicines</strong>
-					<small>Your medication plan</small>
-				</div>
-			</button>
+    <div>
+        <strong>Medicines</strong>
+        <small>Your medication plan</small>
+    </div>
+</a>
+
 
 
 			<button class="nav-link">
