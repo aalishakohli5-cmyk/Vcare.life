@@ -1,0 +1,12 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "env": {
+    "PUBLIC_SUPABASE_URL": "@public_supabase_url",
+    "PUBLIC_SUPABASE_PUBLISHABLE_KEY": "@public_supabase_publishable_key"
+  },
+  "git": {
+    "silent": false
+  }
+}
