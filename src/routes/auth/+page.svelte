@@ -1,6 +1,13 @@
 <script>
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
+  import {
+    auth,
+    googleProvider,
+    signInWithPopup,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword
+  } from '$lib/firebase.js';
 
   let email = '';
   let password = '';
@@ -11,40 +18,32 @@
 
   const isSenior = role === 'senior';
 
-  function continueWithEmail() {
-    /*
-      TEMPORARY FLOW ONLY.
-
-      Later this function will actually authenticate
-      the user using our auth backend.
-
-      For now:
-      Create account -> onboarding
-      Sign in -> dashboard
-    */
-
+  async function continueWithEmail() {
     if (!email || !password) {
       alert('Please enter your email and password.');
       return;
     }
 
-    if (mode === 'signup') {
-      goto(`/onboarding/${role}`);
-    } else {
-      goto(`/${role}`);
+    try {
+      if (mode === 'signup') {
+        await createUserWithEmailAndPassword(auth, email, password);
+        goto(`/onboarding/${role}`);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+        goto(`/${role}`);
+      }
+    } catch (error) {
+      alert(error.message);
     }
   }
 
-  function continueWithGoogle() {
-    /*
-      IMPORTANT:
-      Google authentication is NOT connected yet.
-
-      We will replace this with real Google OAuth
-      in the next authentication step.
-    */
-
-    alert('Google Sign-In will be connected next.');
+ async function continueWithGoogle() {
+    try {
+      await signInWithPopup(auth, googleProvider);
+      goto(`/${role}`);
+    } catch (error) {
+      alert(error.message);
+    }
   }
 </script>
 
