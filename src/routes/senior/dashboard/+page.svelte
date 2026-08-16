@@ -128,7 +128,9 @@ let profileOpen = $state(false);
 		}
 	];
 
-	let sampleCallMessage = '';
+	let sampleCallMessage = $state('');
+    let isCalling = $state(false);
+    let seniorPhone = $state('');
 
     onMount(async () => {
 	// Detect timezone from the user's device
@@ -144,14 +146,28 @@ let profileOpen = $state(false);
 		return;
 	}
 
-	// Get name from Google account
-	const fullName =
-		user.user_metadata?.full_name ||
-		user.user_metadata?.name ||
-		'User';
+	const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('full_name, phone')
+    .eq('id', user.id)
+    .single();
 
-	senior.fullName = fullName;
-	senior.firstName = fullName.split(' ')[0];
+if (profileError) {
+    console.error('Profile fetch error:', profileError);
+}
+
+if (profile) {
+    senior.fullName =
+        profile.full_name ||
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        'User';
+
+    senior.firstName =
+        senior.fullName.split(' ')[0];
+
+    seniorPhone = profile.phone || '';
+}
 
 	// Start live date/time
 	updateClock();
@@ -191,10 +207,40 @@ function updateClock() {
 		);
 	}
 
-	function takeSampleCall() {
-		sampleCallMessage =
-			'Sample calling will connect here once the Bland AI endpoint is ready.';
-	}
+	async function takeSampleCall() {
+    if (!seniorPhone) {
+        sampleCallMessage = 'No phone number found for this account.';
+        return;
+    }
+
+    isCalling = true;
+    sampleCallMessage = 'Starting your Vcare check-in call...';
+
+    try {
+        const response = await fetch('/api/bland-call', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                phoneNumber: seniorPhone
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Could not start the call');
+        }
+
+        sampleCallMessage = 'Vcare is calling you now! 📞';
+    } catch (error) {
+        console.error('Call error:', error);
+        sampleCallMessage = 'Could not start the call. Please try again.';
+    } finally {
+        isCalling = false;
+    }
+}
 </script>
 
 
