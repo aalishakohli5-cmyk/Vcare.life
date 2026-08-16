@@ -131,6 +131,8 @@ let profileOpen = $state(false);
 	let sampleCallMessage = $state('');
     let isCalling = $state(false);
     let seniorPhone = $state('');
+    let userId = $state('');
+    let pendingMedicine = $state(null);
 
     onMount(async () => {
 	// Detect timezone from the user's device
@@ -145,6 +147,7 @@ let profileOpen = $state(false);
 		goto('/auth');
 		return;
 	}
+userId = user.id;
 
 	const { data: profile, error: profileError } = await supabase
     .from('profiles')
@@ -168,6 +171,20 @@ if (profile) {
 
     seniorPhone = profile.phone || '';
 }
+const { data: medData, error: medError } = await supabase
+    .from('medications')
+    .select('id, name, dosage, scheduled_time, taken')
+    .eq('senior_id', user.id)
+    .eq('taken', false)
+    .order('scheduled_time', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+if (medError) {
+    console.error('Pending medication error:', medError);
+}
+
+pendingMedicine = medData || null;
 
 	// Start live date/time
 	updateClock();
@@ -212,20 +229,30 @@ function updateClock() {
         sampleCallMessage = 'No phone number found for this account.';
         return;
     }
+if (!pendingMedicine) {
+    sampleCallMessage = 'No pending medicine found.';
+    return;
+}
 
     isCalling = true;
     sampleCallMessage = 'Starting your Vcare check-in call...';
 
     try {
-        const response = await fetch('/api/bland-call', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                phoneNumber: seniorPhone
-            })
-        });
+       const response = await fetch('/api/bland-call', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        phoneNumber: seniorPhone,
+        seniorName: senior.firstName,
+        seniorId: userId,
+        medicationId: pendingMedicine.id,
+        medicationName: pendingMedicine.name,
+        dosage: pendingMedicine.dosage
+    })
+});
+
 
         const data = await response.json();
 

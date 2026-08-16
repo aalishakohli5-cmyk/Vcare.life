@@ -3,7 +3,15 @@ import { env } from '$env/dynamic/private';
 
 export async function POST({ request }) {
     try {
-        const { phoneNumber, seniorName } = await request.json();
+        const {
+            phoneNumber,
+            seniorName,
+            seniorId,
+            medicationId,
+            medicationName,
+            dosage
+        } = await request.json();
+
 
         if (!phoneNumber) {
             return json(
@@ -25,20 +33,33 @@ export async function POST({ request }) {
             task: `
 You are Vcare, a warm and caring voice companion for ${seniorName || 'the senior'}.
 
-Politely ask whether they have taken their scheduled medicine.
+You are checking on their scheduled medication:
+Medicine: ${medicationName || 'their medicine'}
+Dosage: ${dosage || 'their prescribed dose'}
 
-If they say yes, acknowledge it warmly.
-If they say no, gently remind them.
+Politely ask:
+"Have you taken your ${medicationName || 'medicine'}?"
 
-Keep the conversation short, natural and supportive.
-    `.trim(),
+Wait for their answer.
 
+If they clearly say yes or confirm they have taken it,
+thank them warmly and end the check-in.
 
+If they say no, gently remind them to take it as prescribed.
+
+Keep this call very short and natural.
+	`.trim(),
+
+            metadata: {
+                senior_id: seniorId,
+                medication_id: medicationId
+            },
 
             ...(env.BLAND_WEBHOOK_URL
                 ? { webhook: env.BLAND_WEBHOOK_URL }
                 : {})
         };
+
 
         const response = await fetch('https://api.bland.ai/v1/calls', {
             method: 'POST',
