@@ -174,7 +174,7 @@ const countryCodes = [
       return;
     }
 
-    goto('/senior');
+    goto('/senior/dashboard');
   }
 </script>
 
