@@ -301,14 +301,15 @@ if (!pendingMedicine) {
 
 
 
-			<button class="nav-link">
-				<span class="nav-icon">◷</span>
+			<a href="/senior/reminder" class="nav-link">
+    <span class="nav-icon">◷</span>
 
-				<div>
-					<strong>Reminders</strong>
-					<small>Your routine & plans</small>
-				</div>
-			</button>
+    <div>
+        <strong>Reminders</strong>
+        <small>Your routine & plans</small>
+    </div>
+</a>
+
 
 
 			<button class="nav-link">
