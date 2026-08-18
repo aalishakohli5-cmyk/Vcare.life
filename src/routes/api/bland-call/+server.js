@@ -2,6 +2,14 @@ import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 
 export async function POST({ request }) {
+    // Validate environment variables
+    if (!env.BLAND_AI_API_KEY) {
+        return json(
+            { success: false, error: 'Bland API key is not configured' },
+            { status: 500 }
+        );
+    }
+
     try {
         const {
             phoneNumber,
@@ -12,18 +20,10 @@ export async function POST({ request }) {
             dosage
         } = await request.json();
 
-
         if (!phoneNumber) {
             return json(
                 { success: false, error: 'Senior phone number is missing' },
                 { status: 400 }
-            );
-        }
-
-        if (!env.BLAND_AI_API_KEY) {
-            return json(
-                { success: false, error: 'Bland API key is not configured' },
-                { status: 500 }
             );
         }
 
@@ -48,7 +48,7 @@ thank them warmly and end the check-in.
 If they say no, gently remind them to take it as prescribed.
 
 Keep this call very short and natural.
-	`.trim(),
+            `.trim(),
 
             metadata: {
                 senior_id: seniorId,
@@ -60,43 +60,49 @@ Keep this call very short and natural.
                 : {})
         };
 
-
         const response = await fetch('https://api.bland.ai/v1/calls', {
             method: 'POST',
-
             headers: {
                 authorization: env.BLAND_AI_API_KEY,
                 'Content-Type': 'application/json'
             },
-
             body: JSON.stringify(body)
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            console.error('Bland error:', data);
+            console.error('Bland API error:', {
+                status: response.status,
+                message: data?.message,
+                error: data
+            });
 
             return json(
                 {
                     success: false,
-                    error: data?.message || 'Bland call failed'
+                    error: data?.message || 'Failed to initiate Vcare call'
                 },
                 { status: response.status }
             );
         }
+
+        console.info('Call initiated successfully:', {
+            callId: data.call_id,
+            seniorId: seniorId
+        });
 
         return json({
             success: true,
             callId: data.call_id ?? null
         });
     } catch (error) {
-        console.error('Call error:', error);
+        console.error('Call endpoint error:', error);
 
         return json(
             {
                 success: false,
-                error: 'Unable to start Vcare call'
+                error: 'Unable to start Vcare call. Please try again.'
             },
             { status: 500 }
         );

@@ -2,11 +2,7 @@
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { supabase } from '$lib/supabase';
-
-	/* =========================================================
-	   TEMPORARY MOCK DATA
-	   Later all user-specific values will come from Supabase.
-	   ========================================================= */
+import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
 	let senior = $state({
 	firstName: 'User',
@@ -19,29 +15,8 @@ let timezone = $state('');
 let profileOpen = $state(false);
 	let mood = 'good';
 
-	let medicines = [
-		{
-			id: 1,
-			name: 'Morning Medicine',
-			dosage: '1 tablet',
-			time: '9:00 AM',
-			status: 'taken'
-		},
-		{
-			id: 2,
-			name: 'Vitamin D',
-			dosage: '1 tablet',
-			time: '1:00 PM',
-			status: 'taken'
-		},
-		{
-			id: 3,
-			name: 'Evening Medicine',
-			dosage: '1 tablet',
-			time: '8:00 PM',
-			status: 'pending'
-		}
-	];
+	let medicines = $state([]);
+	let recentCalls = $state([]);
 
 	let reminders = [
 		{
@@ -67,36 +42,6 @@ let profileOpen = $state(false);
 			category: 'routine',
 			icon: '🎵',
 			status: 'upcoming'
-		}
-	];
-
-	let recentCalls = [
-		{
-			id: 1,
-			date: 'Today',
-			time: '10:04 AM',
-			status: 'completed',
-			duration: '3m 42s',
-			mood: 'Good',
-			summary: 'Morning medicine confirmed · Mood good'
-		},
-		{
-			id: 2,
-			date: 'Yesterday',
-			time: '6:02 PM',
-			status: 'completed',
-			duration: '4m 10s',
-			mood: 'Okay',
-			summary: 'Daily check-in completed'
-		},
-		{
-			id: 3,
-			date: '14 Aug',
-			time: '6:05 PM',
-			status: 'missed',
-			duration: '—',
-			mood: 'Unknown',
-			summary: "Vcare couldn't reach you"
 		}
 	];
 
@@ -140,6 +85,10 @@ let profileOpen = $state(false);
 
 	// Get currently logged-in Supabase user
 	const {
+		data: { session }
+	} = await supabase.auth.getSession();
+
+	const {
 		data: { user }
 	} = await supabase.auth.getUser();
 
@@ -171,20 +120,51 @@ if (profile) {
 
     seniorPhone = profile.phone || '';
 }
+
+// Load medicines
 const { data: medData, error: medError } = await supabase
     .from('medications')
     .select('id, name, dosage, scheduled_time, taken')
     .eq('senior_id', user.id)
-    .eq('taken', false)
-    .order('scheduled_time', { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order('scheduled_time', { ascending: true });
 
-if (medError) {
-    console.error('Pending medication error:', medError);
+if (!medError && medData) {
+	medicines = medData.map(m => ({
+		id: m.id,
+		name: m.name,
+		dosage: m.dosage,
+		time: m.scheduled_time,
+		status: m.taken ? 'taken' : 'pending'
+	}));
+	pendingMedicine = medicines.find(m => m.status === 'pending') || null;
 }
 
-pendingMedicine = medData || null;
+// Fetch call history from backend
+if (session?.access_token && PUBLIC_BACKEND_URL) {
+	try {
+		const callResponse = await fetch(`${PUBLIC_BACKEND_URL}/calls/${user.id}`, {
+			headers: {
+				'Authorization': `Bearer ${session.access_token}`,
+				'Content-Type': 'application/json'
+			}
+		});
+
+		if (callResponse.ok) {
+			const callData = await callResponse.json();
+			recentCalls = callData.map(call => ({
+				id: call.id,
+				date: new Date(call.created_at).toLocaleDateString('en-IN'),
+				time: new Date(call.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+				status: call.status,
+				duration: '—',
+				mood: 'Unknown',
+				summary: call.transcript ? call.transcript.substring(0, 60) + '...' : 'Call completed'
+			}));
+		}
+	} catch (error) {
+		console.error('Failed to fetch call history:', error);
+	}
+}
 
 	// Start live date/time
 	updateClock();

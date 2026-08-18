@@ -2,25 +2,24 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
+	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
 	/* =====================================================
 	   USER / SENIOR
 	===================================================== */
 
-	let caregiverName = $state('Monica');
-	let caregiverInitial = $state('M');
+	let caregiverName = $state('Caregiver');
+	let caregiverInitial = $state('C');
 
-	// TEMPORARY demo senior.
-	// Backend will replace this with caregiver_links + profiles.
 	let senior = $state({
-		name: 'Shanta Devi',
-		firstName: 'Shanta',
-		initials: 'SD',
-		phone: '+919876543210',
-		status: 'Doing well',
-		lastCheckIn: '6:04 PM',
-		mood: 'Good',
-		moodEmoji: '🙂'
+		name: 'Loading...',
+		firstName: 'Senior',
+		initials: 'S',
+		phone: '',
+		status: 'Loading...',
+		lastCheckIn: '—',
+		mood: 'Unknown',
+		moodEmoji: '😊'
 	});
 
 	/* =====================================================
@@ -58,44 +57,16 @@
 	}
 
 	/* =====================================================
-	   MEDICATIONS — TEMP DATA
+	   MEDICATIONS
 	===================================================== */
 
-	let medications = $state([
-		{
-			id: 1,
-			name: 'Morning Medicine',
-			dosage: '1 tablet',
-			time: '8:00 AM',
-			status: 'taken'
-		},
-		{
-			id: 2,
-			name: 'Vitamin D',
-			dosage: '1 capsule',
-			time: '1:00 PM',
-			status: 'taken'
-		},
-		{
-			id: 3,
-			name: 'Evening Medicine',
-			dosage: '1 tablet',
-			time: '8:00 PM',
-			status: 'pending'
-		}
-	]);
+	let medications = $state([]);
 
 	/* =====================================================
 	   ALERTS
 	===================================================== */
 
-	let alerts = $state([
-		{
-			id: 1,
-			title: 'Evening medicine is still pending',
-			message: 'Scheduled for 8:00 PM. Vcare will remind Shanta.'
-		}
-	]);
+	let alerts = $state([]);
 
 	/* =====================================================
 	   RECENT CALL
@@ -103,12 +74,13 @@
 
 	let recentCall = $state({
 		date: 'Today',
-		time: '6:04 PM',
-		duration: '3m 42s',
-		status: 'Completed',
-		summary:
-			'Shanta sounded cheerful. She confirmed her afternoon medicine and said she was feeling well.'
+		time: '—',
+		duration: '—',
+		status: 'Loading...',
+		summary: 'Fetching latest call...'
 	});
+
+	let seniorId = $state('');
 
 	/* =====================================================
 	   AUTH + PROFILE
@@ -118,6 +90,10 @@
 		updateClock();
 
 		const clock = setInterval(updateClock, 30000);
+
+		const {
+			data: { session }
+		} = await supabase.auth.getSession();
 
 		const {
 			data: { user }
@@ -132,9 +108,106 @@
 
 			if (profile?.full_name) {
 				caregiverName = profile.full_name;
+				caregiverInitial = profile.full_name.charAt(0).toUpperCase();
+			}
 
-				caregiverInitial =
-					profile.full_name.charAt(0).toUpperCase();
+			// Fetch assigned seniors from backend
+			try {
+				const token = session?.access_token;
+				if (token && PUBLIC_BACKEND_URL) {
+					const response = await fetch(
+						`${PUBLIC_BACKEND_URL}/caregiver/${user.id}/seniors`,
+						{
+							headers: {
+								'Authorization': `Bearer ${token}`,
+								'Content-Type': 'application/json'
+							}
+						}
+					);
+
+					if (response.ok) {
+						const seniors = await response.json();
+						if (seniors.length > 0) {
+							// Load first senior's data
+							const firstSenior = seniors[0];
+							senior.name = firstSenior.full_name || 'Senior';
+							senior.firstName = (firstSenior.full_name || 'Senior').split(' ')[0];
+							senior.initials = (firstSenior.full_name || 'S')
+								.split(' ')
+								.map(n => n.charAt(0))
+								.join('')
+								.toUpperCase();
+							senior.phone = firstSenior.phone || '';
+							seniorId = firstSenior.id;
+
+							// Fetch medications for this senior
+							if (token) {
+								const medResponse = await fetch(
+									`${PUBLIC_BACKEND_URL}/medications/${firstSenior.id}`,
+									{
+										headers: {
+											'Authorization': `Bearer ${token}`,
+											'Content-Type': 'application/json'
+										}
+									}
+								);
+
+								if (medResponse.ok) {
+									const medData = await medResponse.json();
+									medications = medData.map(m => ({
+										id: m.id,
+										name: m.name,
+										dosage: m.dosage,
+										time: m.scheduled_time,
+										status: m.taken ? 'taken' : 'pending'
+									}));
+
+									// Generate alerts for pending medications
+									const pendingMeds = medications.filter(m => m.status === 'pending');
+									alerts = pendingMeds.map((m, idx) => ({
+										id: idx + 1,
+										title: `${m.name} is still pending`,
+										message: `Scheduled for ${m.time}. Vcare will remind ${senior.firstName}.`
+									}));
+								}
+							}
+
+							// Fetch call history for this senior
+							if (token) {
+								const callResponse = await fetch(
+									`${PUBLIC_BACKEND_URL}/calls/${firstSenior.id}`,
+									{
+										headers: {
+											'Authorization': `Bearer ${token}`,
+											'Content-Type': 'application/json'
+										}
+									}
+								);
+
+								if (callResponse.ok) {
+									const callData = await callResponse.json();
+									if (callData.length > 0) {
+										const latestCall = callData[0];
+										recentCall = {
+											date: new Date(latestCall.created_at).toLocaleDateString('en-IN'),
+											time: new Date(latestCall.created_at).toLocaleTimeString('en-IN', {
+												hour: '2-digit',
+												minute: '2-digit'
+											}),
+											duration: '—',
+											status: latestCall.status,
+											summary: latestCall.transcript
+												? latestCall.transcript.substring(0, 100) + '...'
+												: `${senior.firstName} was called for check-in`
+										};
+									}
+								}
+							}
+						}
+					}
+				}
+			} catch (error) {
+				console.error('Failed to fetch seniors:', error);
 			}
 		}
 
