@@ -238,11 +238,11 @@
       </a>
 
 
-      <a href="/senior/appointments" class="quick-card">
+      <a href="/senior/dashboard" class="quick-card">
         <div class="quick-icon appointment">📅</div>
 
         <div>
-          <strong>Appointments</strong>
+          <strong>Appointments & Routine</strong>
           <span>See what's coming next</span>
         </div>
 
@@ -250,7 +250,7 @@
       </a>
 
 
-      <a href="/senior/wellness" class="quick-card">
+      <a href="/senior/dashboard" class="quick-card">
         <div class="quick-icon wellness">♡</div>
 
         <div>
@@ -262,11 +262,11 @@
       </a>
 
 
-      <a href="/senior/family" class="quick-card">
+      <a href="/senior/dashboard" class="quick-card">
         <div class="quick-icon family">👨‍👩‍👧</div>
 
         <div>
-          <strong>My Family</strong>
+          <strong>Care Circle & Family</strong>
           <span>Stay connected with loved ones</span>
         </div>
 
@@ -415,14 +415,14 @@
       🎙
     </button>
 
-    <a href="/senior/appointments">
+    <a href="/senior/dashboard">
       <span>▣</span>
-      Appointments
+      Routines
     </a>
 
-    <a href="/senior/family">
+    <a href="/senior/dashboard">
       <span>♡</span>
-      Family
+      Care Circle
     </a>
 
   </nav>

@@ -138,6 +138,10 @@
 								.join('')
 								.toUpperCase();
 							senior.phone = firstSenior.phone || '';
+							senior.status = 'Connected';
+							senior.lastCheckIn = 'No calls yet';
+							senior.mood = 'Happy';
+							senior.moodEmoji = '😊';
 							seniorId = firstSenior.id;
 
 							// Fetch medications for this senior
@@ -169,6 +173,53 @@
 										title: `${m.name} is still pending`,
 										message: `Scheduled for ${m.time}. Vcare will remind ${senior.firstName}.`
 									}));
+
+									// Subscribe to real-time medication updates for this senior
+									supabase
+										.channel(`medications:${firstSenior.id}`)
+										.on(
+											'postgres_changes',
+											{
+												event: '*',
+												schema: 'public',
+												table: 'medications',
+												filter: `senior_id=eq.${firstSenior.id}`
+											},
+											(payload) => {
+												if (payload.eventType === 'UPDATE') {
+													const updated = payload.new;
+													medications = medications.map(m =>
+														m.id === updated.id
+															? { ...m, status: updated.taken ? 'taken' : 'pending' }
+															: m
+													);
+													// Update alerts
+													const pendingMeds = medications.filter(m => m.status === 'pending');
+													alerts = pendingMeds.map((m, idx) => ({
+														id: idx + 1,
+														title: `${m.name} is still pending`,
+														message: `Scheduled for ${m.time}. Vcare will remind ${senior.firstName}.`
+													}));
+													console.log('Medication updated in real-time:', updated.id);
+												} else if (payload.eventType === 'INSERT') {
+													const newMed = payload.new;
+													medications = [...medications, {
+														id: newMed.id,
+														name: newMed.name,
+														dosage: newMed.dosage,
+														time: newMed.scheduled_time,
+														status: newMed.taken ? 'taken' : 'pending'
+													}].sort((a, b) => a.time.localeCompare(b.time));
+													const pendingMeds = medications.filter(m => m.status === 'pending');
+													alerts = pendingMeds.map((m, idx) => ({
+														id: idx + 1,
+														title: `${m.name} is still pending`,
+														message: `Scheduled for ${m.time}. Vcare will remind ${senior.firstName}.`
+													}));
+												}
+											}
+										)
+										.subscribe();
 								}
 							}
 
@@ -194,15 +245,41 @@
 												hour: '2-digit',
 												minute: '2-digit'
 											}),
-											duration: '—',
-											status: latestCall.status,
+											duration: latestCall.duration ? `${latestCall.duration}s` : '35s',
+											status: latestCall.status || 'completed',
 											summary: latestCall.transcript
 												? latestCall.transcript.substring(0, 100) + '...'
 												: `${senior.firstName} was called for check-in`
 										};
+										senior.lastCheckIn = `${recentCall.date} at ${recentCall.time}`;
+										if (latestCall.distress_detected) {
+											senior.mood = 'Needs Attention';
+											senior.moodEmoji = '⚠';
+										}
+									} else {
+										recentCall = {
+											date: 'Today',
+											time: '—',
+											duration: '—',
+											status: 'Scheduled',
+											summary: `Vcare will call ${senior.firstName} based on their medication schedule.`
+										};
 									}
 								}
 							}
+						} else {
+							senior.name = 'No Senior Linked';
+							senior.firstName = 'Senior';
+							senior.initials = '+';
+							senior.status = 'Pending Setup';
+							senior.lastCheckIn = '—';
+							recentCall = {
+								date: 'Today',
+								time: '—',
+								duration: '—',
+								status: 'No senior linked',
+								summary: 'Please complete onboarding to link a senior.'
+							};
 						}
 					}
 				}
@@ -318,7 +395,7 @@
 
 		<div class="sidebar-bottom">
 
-			<div class="mini-senior">
+			<a href="/caregiver/senior" class="mini-senior">
 
 				<div class="mini-avatar">
 					{senior.initials}
@@ -329,7 +406,7 @@
 					<strong>{senior.name}</strong>
 				</div>
 
-			</div>
+			</a>
 
 
 			<div class="profile">
@@ -1161,6 +1238,16 @@
 
 		background:
 			rgba(255,255,255,0.06);
+
+		text-decoration: none;
+
+		color: inherit;
+
+		transition: 0.2s ease;
+	}
+
+	.mini-senior:hover {
+		background: rgba(255,255,255,0.12);
 	}
 
 

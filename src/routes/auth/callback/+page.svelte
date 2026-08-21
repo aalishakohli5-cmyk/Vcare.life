@@ -4,7 +4,7 @@
   import { page } from '$app/state';
   import { supabase } from '$lib/supabase';
 
-  let message = 'Finishing your Google sign-in...';
+  let message = $state('Finishing your Google sign-in...');
 
   onMount(() => {
     const role = page.url.searchParams.get('role') ?? 'senior';

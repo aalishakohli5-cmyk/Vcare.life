@@ -10,7 +10,9 @@ export default {
       filename.split(/[\/\\]/).includes('node_modules') ? undefined : true
   },
   kit: {
-    adapter: adapter(),
+    adapter: adapter({
+      runtime: 'nodejs18.x'
+    }),
     alias: {
       "$asset": "src/lib/assets",
       "$component": "src/lib/components"

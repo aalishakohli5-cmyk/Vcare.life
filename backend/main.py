@@ -22,8 +22,9 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:5173",
         "https://vcare-life.vercel.app",
-        "https://*.vercel.app"
+        "https://august-hackathon.vercel.app"
     ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
