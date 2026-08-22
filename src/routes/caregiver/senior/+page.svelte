@@ -71,7 +71,7 @@
 		// Fetch caregiver profile
 		const { data: profile } = await supabase
 			.from('profiles')
-			.select('full_name, phone')
+			.select('*')
 			.eq('id', user.id)
 			.maybeSingle();
 
@@ -129,12 +129,29 @@
 			}
 
 			if ((!seniors || seniors.length === 0) && profile?.emergency_contact_name) {
-				seniors = [{
-					id: user.id,
-					full_name: profile.emergency_contact_name,
-					phone: profile.emergency_contact_phone || '',
-					role: 'senior'
-				}];
+				if (profile.emergency_contact_phone) {
+					try {
+						const { data: matched } = await supabase
+							.from('profiles')
+							.select('*')
+							.eq('phone', profile.emergency_contact_phone)
+							.maybeSingle();
+						if (matched) {
+							seniors = [matched];
+						}
+					} catch (e) {
+						console.warn('Matching senior by phone error:', e);
+					}
+				}
+
+				if (!seniors || seniors.length === 0) {
+					seniors = [{
+						id: user.id,
+						full_name: profile.emergency_contact_name,
+						phone: profile.emergency_contact_phone || '',
+						role: 'senior'
+					}];
+				}
 			}
 		}
 
