@@ -1,40 +1,70 @@
 <script>
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { page } from '$app/state';
   import { supabase } from '$lib/supabase';
 
   let message = $state('Finishing your Google sign-in...');
 
   onMount(() => {
-    const role = page.url.searchParams.get('role') ?? 'senior';
+    let role = 'senior';
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      role = params.get('role') || 'senior';
+    }
+
+    async function handleRedirect(session) {
+      if (!session?.user) return;
+
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role, onboarding_complete')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        const userRole = profile?.role || role;
+
+        if (profile?.onboarding_complete) {
+          goto(`/${userRole}/dashboard`);
+        } else {
+          goto(`/onboarding/${userRole}`);
+        }
+      } catch (err) {
+        console.error('Redirect check error:', err);
+        goto(`/onboarding/${role}`);
+      }
+    }
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
         if (session) {
-          goto(`/onboarding/${role}`);
+          await handleRedirect(session);
         }
       }
     );
 
     async function finishLogin() {
-      const { data, error } = await supabase.auth.getSession();
+      try {
+        const { data, error } = await supabase.auth.getSession();
 
-      if (error) {
-        console.error(error);
-        message = 'We could not finish signing you in.';
-        return;
-      }
+        if (error) {
+          console.error(error);
+          message = 'We could not finish signing you in. Please try again.';
+          return;
+        }
 
-      if (data.session) {
-        goto(`/onboarding/${role}`);
+        if (data?.session) {
+          await handleRedirect(data.session);
+        }
+      } catch (err) {
+        console.error(err);
       }
     }
 
     finishLogin();
 
     return () => {
-      authListener.subscription.unsubscribe();
+      authListener?.subscription?.unsubscribe();
     };
   });
 </script>
