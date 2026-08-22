@@ -1486,7 +1486,7 @@
 
 	<!-- HELP MODAL -->
 	{#if helpOpen}
-		<div class="help-overlay" onclick={(e) => { if (e.target === e.currentTarget) helpOpen = false; }} role="dialog" aria-modal="true">
+		<div class="help-overlay" onclick={(e) => { if (e.target === e.currentTarget) helpOpen = false; }} role="dialog" aria-modal="true" tabindex="-1">
 			<div class="help-card">
 				<header class="help-header">
 					<div>

@@ -550,7 +550,7 @@
 
 <!-- ADD MEDICINE MODAL -->
 {#if showAddModal}
-	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showAddModal = false; }} role="dialog" aria-modal="true">
+	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showAddModal = false; }} role="dialog" aria-modal="true" tabindex="-1">
 		<div class="modal-card">
 			<header class="modal-header">
 				<div>
