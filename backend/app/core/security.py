@@ -24,18 +24,21 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         logger.error(f"Authentication error: {str(e)}")
         raise HTTPException(status_code=401, detail="Authentication failed")
 
-def verify_caregiver_access(caregiver_id: str, senior_id: str):
-    """Verify caregiver has access to this senior"""
+def verify_caregiver_access(user_id: str, senior_id: str):
+    """Verify user is either the senior themselves or an authorized linked caregiver"""
+    if str(user_id) == str(senior_id):
+        return True
+
     try:
         response = supabase.table("caregiver_links") \
             .select("*") \
-            .eq("caregiver_id", caregiver_id) \
+            .eq("caregiver_id", user_id) \
             .eq("senior_id", senior_id) \
             .execute()
 
         if not response.data:
             logger.warning(
-                f"Access denied: caregiver {caregiver_id} -> senior {senior_id}"
+                f"Access denied: user {user_id} -> senior {senior_id}"
             )
             raise HTTPException(
                 status_code=403,

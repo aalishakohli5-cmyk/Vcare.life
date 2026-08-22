@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
+	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
 	/* =====================================================
 	   CAREGIVER DATA
@@ -179,7 +180,7 @@
 
 		if (!seniorPhone.trim()) {
 			errorMessage =
-				'Please enter the senior’s phone number.';
+				'Please enter the senior\u2019s phone number.';
 			return;
 		}
 
@@ -205,6 +206,7 @@
 		const fullSeniorPhone =
 			`${seniorCountryCode}${cleanPhone(seniorPhone)}`;
 
+		// Step 1: Save caregiver profile to Supabase
 		const { error } = await supabase
 			.from('profiles')
 			.upsert({
@@ -216,15 +218,6 @@
 				email: user.email,
 
 				phone: fullCaregiverPhone,
-
-				/*
-					MVP:
-					We're temporarily storing the senior contact
-					in these fields.
-
-					Later caregiver_links will properly link
-					the caregiver's profile to the senior profile.
-				*/
 
 				emergency_contact_name: seniorName.trim(),
 
@@ -248,6 +241,42 @@
 				'Your caregiver profile could not be saved yet. Please try again.';
 
 			return;
+		}
+
+		// Step 2: Create senior profile + link via backend
+		try {
+			const {
+				data: { session }
+			} = await supabase.auth.getSession();
+
+			const token = session?.access_token;
+
+			if (token && PUBLIC_BACKEND_URL) {
+				const response = await fetch(
+					`${PUBLIC_BACKEND_URL}/caregiver/${user.id}/complete-onboarding`,
+					{
+						method: 'POST',
+						headers: {
+							'Authorization': `Bearer ${token}`,
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							senior_name: seniorName.trim(),
+							senior_phone: fullSeniorPhone,
+							relationship: relationship.trim()
+						})
+					}
+				);
+
+				if (!response.ok) {
+					const errData = await response.json().catch(() => ({}));
+					console.error('Onboarding API error:', errData);
+					// Non-blocking: profile is saved, senior link is a best-effort
+				}
+			}
+		} catch (err) {
+			console.error('Failed to complete onboarding via backend:', err);
+			// Non-blocking: the profile was saved, dashboard will just be empty until link exists
 		}
 
 		goto('/caregiver/dashboard');

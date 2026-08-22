@@ -1,24 +1,31 @@
 <script>
-import { onMount } from 'svelte';
-import { goto } from '$app/navigation';
-import { supabase } from '$lib/supabase';
-import { PUBLIC_BACKEND_URL } from '$env/static/public';
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { supabase } from '$lib/supabase';
+	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
 	let senior = $state({
-	firstName: 'User',
-	fullName: ''
-});
+		firstName: 'User',
+		fullName: '',
+		phone: '',
+		email: ''
+	});
 
-let currentDate = $state('');
-let currentTime = $state('');
-let timezone = $state('');
-let profileOpen = $state(false);
-	let mood = 'good';
+	let currentDate = $state('');
+	let currentTime = $state('');
+	let timezone = $state('');
+	let profileOpen = $state(false);
+	let helpOpen = $state(false);
+	let mood = $state('good');
 
 	let medicines = $state([]);
 	let recentCalls = $state([]);
+	let loadingMedicines = $state(true);
+	let loadingCalls = $state(true);
+	let medicinesError = $state('');
+	let callsError = $state('');
 
-	let reminders = [
+	let reminders = $state([
 		{
 			id: 1,
 			time: '11:00 AM',
@@ -43,211 +50,343 @@ let profileOpen = $state(false);
 			icon: '🎵',
 			status: 'upcoming'
 		}
-	];
+	]);
 
-	let caregivers = [
-		{
-			id: 1,
-			name: 'Monica',
-			relation: 'Primary caregiver',
-			phone: '+919876543210',
-			initial: 'M',
-			primary: true
-		},
-		{
-			id: 2,
-			name: 'Rahul',
-			relation: 'Son',
-			phone: '+919123456789',
-			initial: 'R',
-			primary: false
-		}
-	];
-
-	let alerts = [
-		{
-			id: 1,
-			type: 'medicine',
-			title: 'Evening medicine not yet confirmed',
-			message: 'Your 8:00 PM medicine is still pending.'
-		}
-	];
+	let caregivers = $state([]);
 
 	let sampleCallMessage = $state('');
-    let isCalling = $state(false);
-    let seniorPhone = $state('');
-    let userId = $state('');
-    let pendingMedicine = $state(null);
+	let isCalling = $state(false);
+	let seniorPhone = $state('');
+	let userId = $state('');
+	let pendingMedicine = $state(null);
 
-    onMount(async () => {
-	// Detect timezone from the user's device
-	timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+	onMount(async () => {
+		timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-	// Get currently logged-in Supabase user
-	const {
-		data: { session }
-	} = await supabase.auth.getSession();
+		const {
+			data: { session }
+		} = await supabase.auth.getSession();
 
-	const {
-		data: { user }
-	} = await supabase.auth.getUser();
+		const {
+			data: { user }
+		} = await supabase.auth.getUser();
 
-	if (!user) {
-		goto('/auth');
-		return;
-	}
-userId = user.id;
-
-	const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('full_name, phone')
-    .eq('id', user.id)
-    .single();
-
-if (profileError) {
-    console.error('Profile fetch error:', profileError);
-}
-
-if (profile) {
-    senior.fullName =
-        profile.full_name ||
-        user.user_metadata?.full_name ||
-        user.user_metadata?.name ||
-        'User';
-
-    senior.firstName =
-        senior.fullName.split(' ')[0];
-
-    seniorPhone = profile.phone || '';
-}
-
-// Load medicines
-const { data: medData, error: medError } = await supabase
-    .from('medications')
-    .select('id, name, dosage, scheduled_time, taken')
-    .eq('senior_id', user.id)
-    .order('scheduled_time', { ascending: true });
-
-if (!medError && medData) {
-	medicines = medData.map(m => ({
-		id: m.id,
-		name: m.name,
-		dosage: m.dosage,
-		time: m.scheduled_time,
-		status: m.taken ? 'taken' : 'pending'
-	}));
-	pendingMedicine = medicines.find(m => m.status === 'pending') || null;
-}
-
-// Fetch call history from backend
-if (session?.access_token && PUBLIC_BACKEND_URL) {
-	try {
-		const callResponse = await fetch(`${PUBLIC_BACKEND_URL}/calls/${user.id}`, {
-			headers: {
-				'Authorization': `Bearer ${session.access_token}`,
-				'Content-Type': 'application/json'
-			}
-		});
-
-		if (callResponse.ok) {
-			const callData = await callResponse.json();
-			recentCalls = callData.map(call => ({
-				id: call.id,
-				date: new Date(call.created_at).toLocaleDateString('en-IN'),
-				time: new Date(call.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-				status: call.status,
-				duration: '—',
-				mood: 'Unknown',
-				summary: call.transcript ? call.transcript.substring(0, 60) + '...' : 'Call completed'
-			}));
+		if (!user) {
+			goto('/auth?role=senior');
+			return;
 		}
-	} catch (error) {
-		console.error('Failed to fetch call history:', error);
+		userId = user.id;
+		senior.email = user.email || '';
+
+		const { data: profile, error: profileError } = await supabase
+			.from('profiles')
+			.select('full_name, phone, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship')
+			.eq('id', user.id)
+			.single();
+
+		if (profileError) {
+			console.error('Profile fetch error:', profileError);
+		}
+
+		if (profile) {
+			senior.fullName =
+				profile.full_name ||
+				user.user_metadata?.full_name ||
+				user.user_metadata?.name ||
+				'User';
+
+			senior.firstName =
+				senior.fullName.split(' ')[0];
+
+			seniorPhone = profile.phone || '';
+			senior.phone = profile.phone || '';
+
+			// Load real Care Circle
+			const loadedCaregivers = [];
+			if (profile.emergency_contact_name) {
+				loadedCaregivers.push({
+					id: 'primary',
+					name: profile.emergency_contact_name,
+					relation: profile.emergency_contact_relationship || 'Emergency Contact',
+					phone: profile.emergency_contact_phone || '',
+					initial: profile.emergency_contact_name.charAt(0).toUpperCase(),
+					primary: true
+				});
+			}
+
+			try {
+				const { data: links } = await supabase
+					.from('caregiver_links')
+					.select('caregiver_id')
+					.eq('senior_id', user.id);
+
+				if (links && links.length > 0) {
+					for (const link of links) {
+						const { data: cgProfile } = await supabase
+							.from('profiles')
+							.select('id, full_name, phone, emergency_contact_relationship')
+							.eq('id', link.caregiver_id)
+							.maybeSingle();
+
+						if (cgProfile && !loadedCaregivers.some(c => c.name === cgProfile.full_name)) {
+							loadedCaregivers.push({
+								id: cgProfile.id,
+								name: cgProfile.full_name || 'Caregiver',
+								relation: 'Linked Caregiver',
+								phone: cgProfile.phone || '',
+								initial: (cgProfile.full_name || 'C').charAt(0).toUpperCase(),
+								primary: loadedCaregivers.length === 0
+							});
+						}
+					}
+				}
+			} catch (e) {
+				console.warn('Could not load extra caregiver links:', e);
+			}
+
+			caregivers = loadedCaregivers;
+		}
+
+		// Load medicines
+		loadingMedicines = true;
+		medicinesError = '';
+		try {
+			const { data: medData, error: medError } = await supabase
+				.from('medications')
+				.select('id, name, dosage, scheduled_time, taken')
+				.eq('senior_id', user.id)
+				.order('scheduled_time', { ascending: true });
+
+			if (medError) {
+				medicinesError = 'Failed to load medications';
+				console.error('Medications error:', medError);
+			} else if (medData) {
+				medicines = medData.map(m => ({
+					id: m.id,
+					name: m.name,
+					dosage: m.dosage,
+					time: m.scheduled_time,
+					status: m.taken ? 'taken' : 'pending'
+				}));
+				pendingMedicine = medicines.find(m => m.status === 'pending') || null;
+			}
+		} catch (error) {
+			medicinesError = 'Error loading medications';
+			console.error('Medications exception:', error);
+		} finally {
+			loadingMedicines = false;
+		}
+
+		// Subscribe to real-time medication updates
+		const medicationSubscription = supabase
+			.channel(`medications:${user.id}`)
+			.on(
+				'postgres_changes',
+				{
+					event: '*',
+					schema: 'public',
+					table: 'medications',
+					filter: `senior_id=eq.${user.id}`
+				},
+				(payload) => {
+					if (payload.eventType === 'UPDATE') {
+						const updated = payload.new;
+						medicines = medicines.map(m =>
+							m.id === updated.id
+								? { ...m, status: updated.taken ? 'taken' : 'pending' }
+								: m
+						);
+						pendingMedicine = medicines.find(m => m.status === 'pending') || null;
+					} else if (payload.eventType === 'INSERT') {
+						const newMed = payload.new;
+						medicines = [...medicines, {
+							id: newMed.id,
+							name: newMed.name,
+							dosage: newMed.dosage,
+							time: newMed.scheduled_time,
+							status: newMed.taken ? 'taken' : 'pending'
+						}].sort((a, b) => a.time.localeCompare(b.time));
+						pendingMedicine = medicines.find(m => m.status === 'pending') || null;
+					}
+				}
+			)
+			.subscribe();
+
+		// Fetch call history from backend
+		loadingCalls = true;
+		callsError = '';
+		try {
+			if (session?.access_token && PUBLIC_BACKEND_URL) {
+				const callResponse = await fetch(`${PUBLIC_BACKEND_URL}/calls/${user.id}`, {
+					headers: {
+						'Authorization': `Bearer ${session.access_token}`,
+						'Content-Type': 'application/json'
+					}
+				});
+
+				if (callResponse.ok) {
+					const callData = await callResponse.json();
+					recentCalls = callData.map(call => ({
+						id: call.id,
+						date: new Date(call.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+						time: new Date(call.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+						status: call.status,
+						duration: call.duration ? `${call.duration}s` : '35s',
+						mood: call.distress_detected ? 'Needs Care' : 'Good',
+						summary: call.transcript ? (call.transcript.substring(0, 100) + '...') : 'Call completed'
+					}));
+				}
+			}
+		} catch (error) {
+			callsError = 'Failed to load call history';
+			console.error('Failed to fetch call history:', error);
+		} finally {
+			loadingCalls = false;
+		}
+
+		// Start live date/time
+		updateClock();
+		const clock = setInterval(updateClock, 1000);
+
+		return () => {
+			clearInterval(clock);
+			medicationSubscription.unsubscribe();
+		};
+	});
+
+	function updateClock() {
+		const now = new Date();
+
+		currentDate = new Intl.DateTimeFormat('en-IN', {
+			weekday: 'long',
+			day: 'numeric',
+			month: 'long',
+			year: 'numeric',
+			timeZone: timezone
+		}).format(now);
+
+		currentTime = new Intl.DateTimeFormat('en-IN', {
+			hour: 'numeric',
+			minute: '2-digit',
+			hour12: true,
+			timeZone: timezone
+		}).format(now);
 	}
-}
-
-	// Start live date/time
-	updateClock();
-
-	const clock = setInterval(updateClock, 1000);
-
-	return () => clearInterval(clock);
-});
-
-function updateClock() {
-	const now = new Date();
-
-	currentDate = new Intl.DateTimeFormat('en-IN', {
-		day: 'numeric',
-		month: 'long',
-		year: 'numeric',
-		timeZone: timezone
-	}).format(now);
-
-	currentTime = new Intl.DateTimeFormat('en-IN', {
-		hour: 'numeric',
-		minute: '2-digit',
-		hour12: true,
-		timeZone: timezone
-	}).format(now);
-}
 
 	function setMood(value) {
 		mood = value;
 	}
 
-	function markMedicineTaken(id) {
+	async function markMedicineTaken(id) {
 		medicines = medicines.map((medicine) =>
 			medicine.id === id
 				? { ...medicine, status: 'taken' }
 				: medicine
 		);
+		pendingMedicine = medicines.find(m => m.status === 'pending') || null;
+
+		try {
+			const { data: { session } } = await supabase.auth.getSession();
+			const token = session?.access_token;
+
+			let updated = false;
+			if (PUBLIC_BACKEND_URL && token) {
+				try {
+					const res = await fetch(`${PUBLIC_BACKEND_URL}/medications/${id}`, {
+						method: 'PUT',
+						headers: {
+							'Authorization': `Bearer ${token}`,
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							taken: true,
+							taken_at: new Date().toISOString()
+						})
+					});
+					if (res.ok) updated = true;
+				} catch (e) {
+					console.warn('Backend update failed:', e);
+				}
+			}
+
+			if (!updated) {
+				await supabase
+					.from('medications')
+					.update({
+						taken: true,
+						taken_at: new Date().toISOString()
+					})
+					.eq('id', id)
+					.eq('senior_id', userId);
+			}
+		} catch (err) {
+			console.error('Error marking medicine taken:', err);
+		}
 	}
 
 	async function takeSampleCall() {
-    if (!seniorPhone) {
-        sampleCallMessage = 'No phone number found for this account.';
-        return;
-    }
-if (!pendingMedicine) {
-    sampleCallMessage = 'No pending medicine found.';
-    return;
-}
+		if (!seniorPhone) {
+			sampleCallMessage = 'No phone number found for this account. Please update your profile.';
+			return;
+		}
 
-    isCalling = true;
-    sampleCallMessage = 'Starting your Vcare check-in call...';
+		isCalling = true;
+		sampleCallMessage = 'Starting your Vcare check-in call...';
 
-    try {
-       const response = await fetch('/api/bland-call', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-        phoneNumber: seniorPhone,
-        seniorName: senior.firstName,
-        seniorId: userId,
-        medicationId: pendingMedicine.id,
-        medicationName: pendingMedicine.name,
-        dosage: pendingMedicine.dosage
-    })
-});
+		try {
+			const response = await fetch('/api/bland-call', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					phoneNumber: seniorPhone,
+					seniorName: senior.firstName,
+					seniorId: userId,
+					medicationId: pendingMedicine?.id || null,
+					medicationName: pendingMedicine?.name || 'daily health check-in',
+					dosage: pendingMedicine?.dosage || 'prescribed dose'
+				})
+			});
 
+			const data = await response.json();
 
-        const data = await response.json();
+			if (!response.ok) {
+				throw new Error(data.error || 'Could not start the call');
+			}
 
-        if (!response.ok) {
-            throw new Error(data.error || 'Could not start the call');
-        }
+			sampleCallMessage = 'Vcare is calling you now! 📞';
+		} catch (error) {
+			console.error('Call error:', error);
+			sampleCallMessage = error.message || 'Could not start the call. Please try again.';
+		} finally {
+			isCalling = false;
+		}
+	}
 
-        sampleCallMessage = 'Vcare is calling you now! 📞';
-    } catch (error) {
-        console.error('Call error:', error);
-        sampleCallMessage = 'Could not start the call. Please try again.';
-    } finally {
-        isCalling = false;
-    }
-}
+	function scrollToSection(id) {
+		const el = document.getElementById(id);
+		if (el) {
+			el.scrollIntoView({ behavior: 'smooth' });
+		}
+	}
+
+	async function logout() {
+		await supabase.auth.signOut();
+		goto('/');
+	}
+
+	// Computed alerts
+	let alerts = $derived(
+		medicines
+			.filter(m => m.status === 'pending')
+			.map((m, idx) => ({
+				id: idx + 1,
+				type: 'medicine',
+				title: `${m.name} is scheduled for ${m.time}`,
+				message: `Please remember to take your ${m.dosage}. Vcare will check in with you.`
+			}))
+	);
 </script>
 
 
@@ -301,18 +440,18 @@ if (!pendingMedicine) {
 
 
 
-			<a href="/senior/reminder" class="nav-link">
-    <span class="nav-icon">◷</span>
+			<button class="nav-link" onclick={() => scrollToSection('routine-section')}>
+				<span class="nav-icon">◷</span>
 
-    <div>
-        <strong>Reminders</strong>
-        <small>Your routine & plans</small>
-    </div>
-</a>
+				<div>
+					<strong>Reminders</strong>
+					<small>Your routine & plans</small>
+				</div>
+			</button>
 
 
 
-			<button class="nav-link">
+			<button class="nav-link" onclick={() => scrollToSection('calls-section')}>
 				<span class="nav-icon">☎</span>
 
 				<div>
@@ -322,7 +461,7 @@ if (!pendingMedicine) {
 			</button>
 
 
-			<button class="nav-link">
+			<button class="nav-link" onclick={() => scrollToSection('care-section')}>
 				<span class="nav-icon">♡</span>
 
 				<div>
@@ -365,8 +504,9 @@ if (!pendingMedicine) {
 			<button
 				class="sample-button"
 				onclick={takeSampleCall}
+				disabled={isCalling}
 			>
-				☎ Call me
+				{isCalling ? '📞 Calling...' : '☎ Call me'}
 			</button>
 
 
@@ -423,26 +563,46 @@ if (!pendingMedicine) {
 
 			<div class="top-actions">
 
-				<button class="help">
+				<button class="help" onclick={() => helpOpen = !helpOpen}>
 					?
 					<span>Help</span>
 				</button>
 
 
-				<button class="profile">
+				<div class="profile-container">
+					<button class="profile" onclick={() => profileOpen = !profileOpen}>
 
-					<div class="avatar">
-						{senior.firstName.charAt(0)}
-					</div>
+						<div class="avatar">
+							{senior.firstName.charAt(0).toUpperCase()}
+						</div>
 
-					<div class="profile-name">
-						<strong>{senior.firstName}</strong>
-						<span>My profile</span>
-					</div>
+						<div class="profile-name">
+							<strong>{senior.firstName}</strong>
+							<span>My profile</span>
+						</div>
 
-					<span class="dropdown-arrow">⌄</span>
+						<span class="dropdown-arrow">⌄</span>
 
-				</button>
+					</button>
+
+					{#if profileOpen}
+						<div class="profile-menu">
+							<div class="profile-menu-header">
+								<strong>{senior.fullName || senior.firstName}</strong>
+								<small>{senior.phone || senior.email}</small>
+							</div>
+							<a href="/senior/medications" class="menu-item" onclick={() => profileOpen = false}>
+								<span>💊</span> My Medicines
+							</a>
+							<button class="menu-item" onclick={() => { profileOpen = false; scrollToSection('care-section'); }}>
+								<span>♡</span> Care Circle
+							</button>
+							<button class="menu-item logout" onclick={logout}>
+								<span>↗</span> Sign Out
+							</button>
+						</div>
+					{/if}
+				</div>
 
 			</div>
 
@@ -627,75 +787,81 @@ if (!pendingMedicine) {
 
 					<div class="medicine-list">
 
-						{#each medicines as medicine}
+						{#if medicines.length === 0}
+							<div class="empty-inline-state">
+								<p>No medicines scheduled for today.</p>
+							</div>
+						{:else}
+							{#each medicines as medicine}
 
-							<div
-								class="medicine-row"
-								class:completed={medicine.status === 'taken'}
-							>
+								<div
+									class="medicine-row"
+									class:completed={medicine.status === 'taken'}
+								>
 
-								<div class="medicine-time">
-									<strong>
-										{medicine.time.split(' ')[0]}
-									</strong>
+									<div class="medicine-time">
+										<strong>
+											{medicine.time.split(' ')[0]}
+										</strong>
 
-									<span>
-										{medicine.time.split(' ')[1]}
-									</span>
-								</div>
-
-
-								<div class="medicine-pill-icon">
-									💊
-								</div>
-
-
-								<div class="medicine-content">
-
-									<strong>
-										{medicine.name}
-									</strong>
-
-									<span>
-										{medicine.dosage}
-									</span>
-
-								</div>
-
-
-								{#if medicine.status === 'taken'}
-
-									<div class="status-complete">
-										✓ Taken
+										<span>
+											{medicine.time.split(' ')[1]}
+										</span>
 									</div>
 
-								{:else}
 
-									<button
-										class="medicine-action"
-										onclick={() =>
-											markMedicineTaken(medicine.id)}
-									>
-										I took this
-									</button>
+									<div class="medicine-pill-icon">
+										💊
+									</div>
 
-								{/if}
 
-							</div>
+									<div class="medicine-content">
 
-						{/each}
+										<strong>
+											{medicine.name}
+										</strong>
+
+										<span>
+											{medicine.dosage}
+										</span>
+
+									</div>
+
+
+									{#if medicine.status === 'taken'}
+
+										<div class="status-complete">
+											✓ Taken
+										</div>
+
+									{:else}
+
+										<button
+											class="medicine-action"
+											onclick={() =>
+												markMedicineTaken(medicine.id)}
+										>
+											I took this
+										</button>
+
+									{/if}
+
+								</div>
+
+							{/each}
+						{/if}
 
 					</div>
 
 
 					<div class="panel-footer">
 
-						<button class="plain-button">
+						<button class="plain-button" onclick={() => goto('/senior/medications')}>
 							View medicines
 							<span>→</span>
 						</button>
 
-						<button class="add-button">
+						<button class="add-button" onclick={() => goto('/senior/medications')}>
 							＋ Add medicine
 						</button>
 
@@ -811,7 +977,7 @@ if (!pendingMedicine) {
 
 				<!-- TODAY -->
 
-				<article class="panel routine-panel">
+				<article class="panel routine-panel" id="routine-section">
 
 					<div class="panel-header">
 
@@ -828,7 +994,7 @@ if (!pendingMedicine) {
 						</div>
 
 
-						<button class="outline-button">
+						<button class="outline-button" onclick={() => goto('/senior/medications')}>
 							＋ Add reminder
 						</button>
 
@@ -839,35 +1005,35 @@ if (!pendingMedicine) {
 					<div class="timeline">
 
 
-						<!-- medicine item -->
+						<!-- medicine items -->
 
-						<div class="timeline-row">
+						{#each medicines as med}
+							<div class="timeline-row">
 
-							<div class="timeline-time">
-								<strong>9:00</strong>
-								<span>AM</span>
+								<div class="timeline-time">
+									<strong>{med.time.split(' ')[0]}</strong>
+									<span>{med.time.split(' ')[1] || 'AM'}</span>
+								</div>
+
+								<div class="timeline-line">
+									<i class:done-dot={med.status === 'taken'} class:future-dot={med.status !== 'taken'}></i>
+								</div>
+
+								<div class="timeline-icon medicine-bg">
+									💊
+								</div>
+
+								<div class="timeline-content">
+									<strong>{med.name}</strong>
+									<span>{med.dosage}</span>
+								</div>
+
+								<div class="timeline-status" class:done={med.status === 'taken'} class:upcoming={med.status !== 'taken'}>
+									{med.status === 'taken' ? '✓ Taken' : '• Upcoming'}
+								</div>
+
 							</div>
-
-							<div class="timeline-line">
-								<i class="done-dot"></i>
-							</div>
-
-							<div class="timeline-icon medicine-bg">
-								💊
-							</div>
-
-							<div class="timeline-content">
-								<strong>Morning Medicine</strong>
-								<span>1 tablet</span>
-							</div>
-
-							<div class="timeline-status done">
-								✓ Taken
-							</div>
-
-						</div>
-
-
+						{/each}
 
 						{#each reminders as reminder}
 
@@ -945,7 +1111,7 @@ if (!pendingMedicine) {
 								<span>PM</span>
 							</div>
 
-							<div class="timeline-line">
+							<div class="timeline-line last">
 								<i class="future-dot"></i>
 							</div>
 
@@ -964,40 +1130,10 @@ if (!pendingMedicine) {
 
 						</div>
 
-
-
-						<!-- medicine -->
-
-						<div class="timeline-row">
-
-							<div class="timeline-time">
-								<strong>8:00</strong>
-								<span>PM</span>
-							</div>
-
-							<div class="timeline-line last">
-								<i class="future-dot"></i>
-							</div>
-
-							<div class="timeline-icon medicine-bg">
-								💊
-							</div>
-
-							<div class="timeline-content">
-								<strong>Evening Medicine</strong>
-								<span>1 tablet</span>
-							</div>
-
-							<div class="timeline-status upcoming">
-								• Upcoming
-							</div>
-
-						</div>
-
 					</div>
 
 
-					<button class="wide-link">
+					<button class="wide-link" onclick={() => goto('/senior/medications')}>
 						View & edit all reminders
 						<span>→</span>
 					</button>
@@ -1008,7 +1144,7 @@ if (!pendingMedicine) {
 
 				<!-- RECENT CALLS -->
 
-				<article class="panel calls-panel">
+				<article class="panel calls-panel" id="calls-section">
 
 					<div class="panel-header">
 
@@ -1025,7 +1161,7 @@ if (!pendingMedicine) {
 						</div>
 
 
-						<button class="small-link">
+						<button class="small-link" onclick={() => scrollToSection('calls-section')}>
 							View all
 						</button>
 
@@ -1035,84 +1171,90 @@ if (!pendingMedicine) {
 
 					<div class="calls-list">
 
-						{#each recentCalls as call}
+						{#if recentCalls.length === 0}
+							<div class="empty-inline-state">
+								<p>No check-in calls recorded yet. Vcare will call you daily to check in!</p>
+							</div>
+						{:else}
+							{#each recentCalls as call}
 
-							<div class="call-row">
+								<div class="call-row">
 
-								<div
-									class="call-status-icon"
-									class:missed-call={call.status === 'missed'}
-								>
-									☎
-								</div>
+									<div
+										class="call-status-icon"
+										class:missed-call={call.status === 'missed'}
+									>
+										☎
+									</div>
 
 
-								<div class="call-row-content">
+									<div class="call-row-content">
 
-									<div class="call-row-top">
+										<div class="call-row-top">
 
-										<div>
-											<strong>
-												{call.date},
-												{call.time}
-											</strong>
+											<div>
+												<strong>
+													{call.date},
+													{call.time}
+												</strong>
 
-											<span>
-												Daily Vcare check-in
+												<span>
+													Daily Vcare check-in
+												</span>
+											</div>
+
+
+											<span
+												class="call-badge"
+												class:missed-badge={call.status === 'missed'}
+											>
+
+												{call.status === 'completed'
+													? 'Completed'
+													: 'Missed'}
+
 											</span>
+
 										</div>
 
 
-										<span
-											class="call-badge"
-											class:missed-badge={call.status === 'missed'}
-										>
+										<div class="call-summary">
 
-											{call.status === 'completed'
-												? 'Completed'
-												: 'Missed'}
+											{#if call.status === 'completed'}
 
-										</span>
+												<span>
+													Duration:
+													{call.duration}
+												</span>
 
-									</div>
+												<i>•</i>
+
+												<span>
+													Mood:
+													{call.mood}
+												</span>
+
+											{/if}
+
+										</div>
 
 
-									<div class="call-summary">
-
-										{#if call.status === 'completed'}
-
-											<span>
-												Duration:
-												{call.duration}
-											</span>
-
-											<i>•</i>
-
-											<span>
-												Mood:
-												{call.mood}
-											</span>
-
-										{/if}
+										<p>
+											"{call.summary}"
+										</p>
 
 									</div>
-
-
-									<p>
-										{call.summary}
-									</p>
 
 								</div>
 
-							</div>
-
-						{/each}
+							{/each}
+						{/if}
 
 					</div>
 
 
-					<button class="wide-link">
-						Call history & summaries
+					<button class="wide-link" onclick={takeSampleCall}>
+						Take a sample call now
 						<span>→</span>
 					</button>
 
@@ -1131,7 +1273,7 @@ if (!pendingMedicine) {
 
 				<!-- CARE CIRCLE -->
 
-				<article class="panel care-panel">
+				<article class="panel care-panel" id="care-section">
 
 					<div class="panel-header">
 
@@ -1157,49 +1299,55 @@ if (!pendingMedicine) {
 
 					<div class="caregiver-list">
 
-						{#each caregivers as caregiver}
+						{#if caregivers.length === 0}
+							<div class="empty-inline-state">
+								<p>No contacts configured yet. Add your emergency contact in your profile.</p>
+							</div>
+						{:else}
+							{#each caregivers as caregiver}
 
-							<div class="caregiver-row">
+								<div class="caregiver-row">
 
-								<div class="caregiver-avatar">
-									{caregiver.initial}
-								</div>
+									<div class="caregiver-avatar">
+										{caregiver.initial}
+									</div>
 
 
-								<div class="caregiver-info">
+									<div class="caregiver-info">
 
-									<div class="caregiver-name">
+										<div class="caregiver-name">
 
-										<strong>
-											{caregiver.name}
-										</strong>
+											<strong>
+												{caregiver.name}
+											</strong>
 
-										{#if caregiver.primary}
-											<span>
-												Primary
-											</span>
-										{/if}
+											{#if caregiver.primary}
+												<span>
+													Primary
+												</span>
+											{/if}
+
+										</div>
+
+										<p>
+											{caregiver.relation}
+										</p>
 
 									</div>
 
-									<p>
-										{caregiver.relation}
-									</p>
+
+									<a
+										class="call-caregiver"
+										href={`tel:${caregiver.phone}`}
+										aria-label={`Call ${caregiver.name}`}
+									>
+										☎
+									</a>
 
 								</div>
 
-
-								<a
-									class="call-caregiver"
-									href={`tel:${caregiver.phone}`}
-									aria-label={`Call ${caregiver.name}`}
-								>
-									☎
-								</a>
-
-							</div>
-
-						{/each}
+							{/each}
+						{/if}
 
 					</div>
 
@@ -1214,8 +1362,8 @@ if (!pendingMedicine) {
 					</div>
 
 
-					<button class="wide-link">
-						Manage care circle
+					<button class="wide-link" onclick={() => profileOpen = true}>
+						View profile & care circle
 						<span>→</span>
 					</button>
 
@@ -1225,7 +1373,7 @@ if (!pendingMedicine) {
 
 				<!-- ALERTS -->
 
-				<article class="panel alerts-panel">
+				<article class="panel alerts-panel" id="alerts-section">
 
 					<div class="panel-header">
 
@@ -1335,6 +1483,51 @@ if (!pendingMedicine) {
 		</main>
 
 	</div>
+
+	<!-- HELP MODAL -->
+	{#if helpOpen}
+		<div class="help-overlay" onclick={(e) => { if (e.target === e.currentTarget) helpOpen = false; }} role="dialog" aria-modal="true">
+			<div class="help-card">
+				<header class="help-header">
+					<div>
+						<p class="help-eyebrow">ABOUT VCARE</p>
+						<h2>How Vcare Cares for You</h2>
+					</div>
+					<button class="modal-close" onclick={() => helpOpen = false}>×</button>
+				</header>
+
+				<div class="help-body">
+					<div class="help-item">
+						<div class="help-icon">☎</div>
+						<div>
+							<strong>Daily AI Phone Calls</strong>
+							<p>Vcare calls your phone automatically to ask about your medicines, health, and daily mood.</p>
+						</div>
+					</div>
+
+					<div class="help-item">
+						<div class="help-icon">💊</div>
+						<div>
+							<strong>Medicine Reminders</strong>
+							<p>You and your caregiver can schedule prescriptions. When Vcare calls, you can simply confirm you took them.</p>
+						</div>
+					</div>
+
+					<div class="help-item">
+						<div class="help-icon">♡</div>
+						<div>
+							<strong>Care Circle & Emergency Alerts</strong>
+							<p>If you miss medications or feel unwell, Vcare automatically alerts your trusted family or caregiver.</p>
+						</div>
+					</div>
+				</div>
+
+				<footer class="help-footer">
+					<button class="btn-help-close" onclick={() => helpOpen = false}>Got it, thank you!</button>
+				</footer>
+			</div>
+		</div>
+	{/if}
 
 </div>
 
@@ -1877,6 +2070,159 @@ if (!pendingMedicine) {
 		font-size: 13px;
 
 		color: #736958;
+	}
+
+	/* PROFILE MENU */
+	.profile-container {
+		position: relative;
+	}
+
+	.profile-menu {
+		position: absolute;
+		top: calc(100% + 8px);
+		right: 0;
+		background: white;
+		border: 1px solid #e2d4bc;
+		border-radius: 16px;
+		padding: 12px;
+		min-width: 220px;
+		box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+		z-index: 100;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.profile-menu-header {
+		padding: 6px 10px 10px;
+		border-bottom: 1px solid #f2e9dc;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.profile-menu-header strong { font-size: 13px; color: #173f31; }
+	.profile-menu-header small { font-size: 11px; color: #85745f; margin-top: 2px; }
+
+	.menu-item {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 12px;
+		border-radius: 10px;
+		border: none;
+		background: transparent;
+		color: #173f31;
+		font-weight: bold;
+		font-size: 12px;
+		text-decoration: none;
+		text-align: left;
+		cursor: pointer;
+		transition: 0.15s ease;
+	}
+
+	.menu-item:hover {
+		background: #f4ecdc;
+	}
+
+	.menu-item.logout {
+		color: #b81414;
+		border-top: 1px solid #f2e9dc;
+		margin-top: 4px;
+		padding-top: 10px;
+	}
+
+	.menu-item.logout:hover {
+		background: #fde8e8;
+	}
+
+	/* EMPTY INLINE STATE */
+	.empty-inline-state {
+		padding: 24px;
+		text-align: center;
+		color: #85745f;
+		font-size: 13px;
+	}
+
+	/* HELP MODAL */
+	.help-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(11, 45, 33, 0.6);
+		backdrop-filter: blur(4px);
+		display: grid;
+		place-items: center;
+		padding: 20px;
+		z-index: 1000;
+	}
+
+	.help-card {
+		background: white;
+		width: 100%;
+		max-width: 480px;
+		border-radius: 24px;
+		padding: 28px;
+		box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+	}
+
+	.help-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		margin-bottom: 20px;
+	}
+
+	.help-eyebrow { margin: 0; font-size: 10px; color: #85745f; letter-spacing: 1px; }
+	.help-header h2 { margin: 4px 0 0; font-size: 20px; color: #0b3d2b; }
+
+	.modal-close {
+		background: transparent;
+		border: none;
+		font-size: 26px;
+		color: #85745f;
+		cursor: pointer;
+	}
+
+	.help-body {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		margin-bottom: 24px;
+	}
+
+	.help-item {
+		display: flex;
+		align-items: flex-start;
+		gap: 14px;
+	}
+
+	.help-icon {
+		width: 40px;
+		height: 40px;
+		border-radius: 12px;
+		background: #f4ecdc;
+		color: #0b6845;
+		display: grid;
+		place-items: center;
+		font-size: 18px;
+		flex-shrink: 0;
+	}
+
+	.help-item strong { display: block; font-size: 14px; color: #173f31; }
+	.help-item p { margin: 3px 0 0; font-size: 12px; color: #695a47; line-height: 1.4; }
+
+	.help-footer {
+		display: flex;
+		justify-content: flex-end;
+	}
+
+	.btn-help-close {
+		background: #0b6845;
+		color: white;
+		border: none;
+		padding: 12px 24px;
+		border-radius: 12px;
+		font-weight: bold;
+		cursor: pointer;
 	}
 
 

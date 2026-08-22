@@ -119,6 +119,10 @@ const countryCodes = [
     }
   }
 
+  function cleanPhone(value) {
+    return (value || '').replace(/\D/g, '');
+  }
+
   async function finishSetup() {
     errorMessage = '';
 
@@ -145,6 +149,14 @@ const countryCodes = [
       return;
     }
 
+    const fullPhone = phone.trim().startsWith('+')
+      ? phone.trim()
+      : `${countryCode}${cleanPhone(phone)}`;
+
+    const fullEmergencyPhone = emergencyPhone.trim().startsWith('+')
+      ? emergencyPhone.trim()
+      : `${countryCode}${cleanPhone(emergencyPhone)}`;
+
     const { error } = await supabase
       .from('profiles')
       .upsert({
@@ -153,13 +165,13 @@ const countryCodes = [
         full_name: fullName.trim(),
         email: user.email,
         date_of_birth: dateOfBirth,
-        phone: phone.trim(),
+        phone: fullPhone,
         gender: gender || null,
         preferred_language: language,
         emergency_contact_name: emergencyName.trim(),
         emergency_contact_relationship:
-          emergencyRelationship.trim() || null,
-        emergency_contact_phone: emergencyPhone.trim(),
+          emergencyRelationship.trim() || 'Caregiver',
+        emergency_contact_phone: fullEmergencyPhone,
         onboarding_complete: true,
         updated_at: new Date().toISOString()
       });
@@ -172,6 +184,25 @@ const countryCodes = [
         'Your profile could not be saved yet. Please try again.';
 
       return;
+    }
+
+    // Auto-link caregiver if matching phone is already registered
+    try {
+      const { data: matchedCaregiver } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone', fullEmergencyPhone)
+        .eq('role', 'caregiver')
+        .maybeSingle();
+
+      if (matchedCaregiver?.id) {
+        await supabase.from('caregiver_links').upsert({
+          caregiver_id: matchedCaregiver.id,
+          senior_id: user.id
+        }, { onConflict: 'caregiver_id,senior_id' });
+      }
+    } catch (linkErr) {
+      console.warn('Auto caregiver link check:', linkErr);
     }
 
     goto('/senior/dashboard');

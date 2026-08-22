@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
+	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
 	let senior = $state({
 		firstName: 'User',
@@ -33,7 +34,7 @@
 			} = await supabase.auth.getUser();
 
 			if (authError || !user) {
-				goto('/auth');
+				goto('/auth?role=senior');
 				return;
 			}
 
@@ -137,77 +138,206 @@
 
 		saving = true;
 
-		const { error } = await supabase.from('medications').insert({
-			senior_id: userId,
-			name: medicineName.trim(),
-			dosage: dosage.trim(),
-			scheduled_time: scheduledTime,
-			taken: false,
-			taken_at: null
-		});
+		try {
+			const { data: { session } } = await supabase.auth.getSession();
+			const token = session?.access_token;
 
-		saving = false;
+			let added = false;
 
-		if (error) {
+			// First attempt through backend endpoint which uses service role
+			if (PUBLIC_BACKEND_URL && token) {
+				try {
+					const response = await fetch(`${PUBLIC_BACKEND_URL}/medications/`, {
+						method: 'POST',
+						headers: {
+							'Authorization': `Bearer ${token}`,
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							senior_id: userId,
+							name: medicineName.trim(),
+							dosage: dosage.trim(),
+							scheduled_time: scheduledTime
+						})
+					});
+
+					if (response.ok) {
+						added = true;
+					} else {
+						const errData = await response.json().catch(() => ({}));
+						console.warn('Backend create error:', errData);
+					}
+				} catch (beErr) {
+					console.warn('Backend request failed:', beErr);
+				}
+			}
+
+			// Fallback to direct supabase client
+			if (!added) {
+				const { error } = await supabase.from('medications').insert({
+					senior_id: userId,
+					name: medicineName.trim(),
+					dosage: dosage.trim(),
+					scheduled_time: scheduledTime,
+					taken: false,
+					taken_at: null
+				});
+
+				if (error) {
+					throw error;
+				}
+			}
+
+			medicineName = '';
+			dosage = '';
+			scheduledTime = '';
+			showAddForm = false;
+			successMessage = 'Medicine added successfully.';
+
+			await loadMedicines();
+
+			setTimeout(() => {
+				successMessage = '';
+			}, 2500);
+		} catch (error) {
 			console.error('Medicine insert error:', error);
 			errorMessage = error.message || 'Could not add the medicine.';
-			return;
+		} finally {
+			saving = false;
 		}
-
-		medicineName = '';
-		dosage = '';
-		scheduledTime = '';
-		showAddForm = false;
-
-		successMessage = 'Medicine added successfully.';
-
-		await loadMedicines();
-
-		setTimeout(() => {
-			successMessage = '';
-		}, 2500);
 	}
 
 	async function markTaken(medicine) {
 		errorMessage = '';
 
-		const { error } = await supabase
-			.from('medications')
-			.update({
-				taken: true,
-				taken_at: new Date().toISOString()
-			})
-			.eq('id', medicine.id)
-			.eq('senior_id', userId);
+		try {
+			const { data: { session } } = await supabase.auth.getSession();
+			const token = session?.access_token;
 
-		if (error) {
+			let updated = false;
+			if (PUBLIC_BACKEND_URL && token) {
+				try {
+					const res = await fetch(`${PUBLIC_BACKEND_URL}/medications/${medicine.id}`, {
+						method: 'PUT',
+						headers: {
+							'Authorization': `Bearer ${token}`,
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							taken: true,
+							taken_at: new Date().toISOString()
+						})
+					});
+					if (res.ok) updated = true;
+				} catch (e) {
+					console.warn('Backend update failed:', e);
+				}
+			}
+
+			if (!updated) {
+				const { error } = await supabase
+					.from('medications')
+					.update({
+						taken: true,
+						taken_at: new Date().toISOString()
+					})
+					.eq('id', medicine.id)
+					.eq('senior_id', userId);
+
+				if (error) throw error;
+			}
+
+			await loadMedicines();
+		} catch (error) {
 			console.error('Medicine update error:', error);
 			errorMessage = 'Could not update the medicine.';
-			return;
 		}
-
-		await loadMedicines();
 	}
 
 	async function markPending(medicine) {
 		errorMessage = '';
 
-		const { error } = await supabase
-			.from('medications')
-			.update({
-				taken: false,
-				taken_at: null
-			})
-			.eq('id', medicine.id)
-			.eq('senior_id', userId);
+		try {
+			const { data: { session } } = await supabase.auth.getSession();
+			const token = session?.access_token;
 
-		if (error) {
+			let updated = false;
+			if (PUBLIC_BACKEND_URL && token) {
+				try {
+					const res = await fetch(`${PUBLIC_BACKEND_URL}/medications/${medicine.id}`, {
+						method: 'PUT',
+						headers: {
+							'Authorization': `Bearer ${token}`,
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							taken: false,
+							taken_at: null
+						})
+					});
+					if (res.ok) updated = true;
+				} catch (e) {
+					console.warn('Backend update failed:', e);
+				}
+			}
+
+			if (!updated) {
+				const { error } = await supabase
+					.from('medications')
+					.update({
+						taken: false,
+						taken_at: null
+					})
+					.eq('id', medicine.id)
+					.eq('senior_id', userId);
+
+				if (error) throw error;
+			}
+
+			await loadMedicines();
+		} catch (error) {
 			console.error('Medicine update error:', error);
 			errorMessage = 'Could not update the medicine.';
-			return;
 		}
+	}
 
-		await loadMedicines();
+	async function deleteMedicine(medicineId) {
+		errorMessage = '';
+
+		try {
+			const { data: { session } } = await supabase.auth.getSession();
+			const token = session?.access_token;
+
+			let deleted = false;
+			if (PUBLIC_BACKEND_URL && token) {
+				try {
+					const res = await fetch(`${PUBLIC_BACKEND_URL}/medications/${medicineId}`, {
+						method: 'DELETE',
+						headers: {
+							'Authorization': `Bearer ${token}`
+						}
+					});
+					if (res.ok) deleted = true;
+				} catch (e) {
+					console.warn('Backend delete failed:', e);
+				}
+			}
+
+			if (!deleted) {
+				const { error } = await supabase
+					.from('medications')
+					.delete()
+					.eq('id', medicineId)
+					.eq('senior_id', userId);
+
+				if (error) throw error;
+			}
+
+			await loadMedicines();
+		} catch (error) {
+			console.error('Medicine delete error:', error);
+			errorMessage = 'Could not delete the medicine.';
+		}
 	}
 
 	function formatTime(time) {
@@ -461,6 +591,14 @@
 										I took this
 									</button>
 								{/if}
+
+								<button
+									class="delete-button"
+									title="Remove medicine"
+									onclick={() => deleteMedicine(medicine.id)}
+								>
+									🗑
+								</button>
 							</div>
 						</article>
 					{/each}
@@ -1144,6 +1282,21 @@
 
 		background: transparent;
 		color: #827563;
+	}
+
+	.delete-button {
+		padding: 6px 9px;
+		border-radius: 9px;
+		border: 1px solid #ecc9c9;
+		background: #fff5f5;
+		color: #b81414;
+		font-size: 11px;
+		cursor: pointer;
+		transition: background 0.15s;
+	}
+
+	.delete-button:hover {
+		background: #ffe3e3;
 	}
 
 	.empty-state {

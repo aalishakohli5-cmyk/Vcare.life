@@ -1,12 +1,15 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Any
+from datetime import datetime
 
 class CallLogCreate(BaseModel):
-    id: Optional[int] = None
+    senior_id: str
     status: str
-    senior_id: int
-    transcript: Optional[str] = None #completed, failed, none
-    distress_detected: Optional[bool] = None
+    call_id: Optional[str] = None
+    transcript: Optional[str] = None
+    duration: Optional[int] = None
+    distress_detected: Optional[bool] = False
 
 class CallLog(CallLogCreate):
-    id: int
+    id: Any
+    created_at: Optional[Any] = None

@@ -4,52 +4,106 @@
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabase';
 
-  let email = '';
-  let password = '';
-  let showPassword = false;
-  let mode = 'signin';
+  let email = $state('');
+  let password = $state('');
+  let showPassword = $state(false);
+  let mode = $state('signin');
+  let loading = $state(false);
+  let errorMessage = $state('');
 
   const role = page.url.searchParams.get('role') ?? 'senior';
 
   const isSenior = role === 'senior';
 
-  function continueWithEmail() {
-    /*
-      TEMPORARY FLOW ONLY.
-
-      Later this function will actually authenticate
-      the user using our auth backend.
-
-      For now:
-      Create account -> onboarding
-      Sign in -> dashboard
-    */
+  async function continueWithEmail() {
+    errorMessage = '';
 
     if (!email || !password) {
-      alert('Please enter your email and password.');
+      errorMessage = 'Please enter your email and password.';
       return;
     }
 
-    if (mode === 'signup') {
-      goto(`/onboarding/${role}`);
-    } else {
-      goto(`/${role}`);
+    if (password.length < 6) {
+      errorMessage = 'Password must be at least 6 characters.';
+      return;
+    }
+
+    loading = true;
+
+    try {
+      if (mode === 'signup') {
+        // Sign up
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              role: role
+            }
+          }
+        });
+
+        if (error) {
+          errorMessage = error.message;
+          loading = false;
+          return;
+        }
+
+        // Redirect to onboarding
+        goto(`/onboarding/${role}`);
+      } else {
+        // Sign in
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) {
+          errorMessage = error.message;
+          loading = false;
+          return;
+        }
+
+        // Redirect to dashboard
+        goto(`/${role}/dashboard`);
+      }
+    } catch (error) {
+      errorMessage = 'An error occurred. Please try again.';
+      console.error(error);
+    } finally {
+      loading = false;
     }
   }
 
- async function continueWithGoogle() {
-    const { error } = await supabase.auth.signInWithOAuth({
+  async function continueWithGoogle() {
+    errorMessage = '';
+    loading = true;
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: `${window.location.origin}/auth/callback?role=${role}`
+          redirectTo: `${window.location.origin}/auth/callback?role=${role}`
         }
-    });
+      });
 
-    if (error) {
-        console.error(error);
-        alert('Google sign-in failed. Please try again.');
+      if (error) {
+        errorMessage = error.message;
+      }
+    } catch (error) {
+      errorMessage = 'Google sign-in failed. Please try again.';
+      console.error(error);
+    } finally {
+      loading = false;
     }
-}
+  }
+
+  function toggleMode() {
+    errorMessage = '';
+    mode = mode === 'signin' ? 'signup' : 'signin';
+    email = '';
+    password = '';
+  }
 
 </script>
 
@@ -208,6 +262,13 @@
 
       </div>
 
+      <!-- Error Message -->
+      {#if errorMessage}
+        <div class="error-banner">
+          <span class="error-icon">⚠️</span>
+          <p>{errorMessage}</p>
+        </div>
+      {/if}
 
       <!-- Google -->
 
@@ -215,6 +276,7 @@
         type="button"
         class="google-button"
         onclick={continueWithGoogle}
+        disabled={loading}
       >
 
         <span class="google-logo">
@@ -222,7 +284,7 @@
         </span>
 
         <span>
-          Continue with Google
+          {loading ? 'Loading...' : 'Continue with Google'}
         </span>
 
       </button>
@@ -254,6 +316,7 @@
           bind:value={email}
           placeholder="you@example.com"
           autocomplete="email"
+          disabled={loading}
         />
 
 
@@ -287,6 +350,7 @@
                 ? 'current-password'
                 : 'new-password'
             }
+            disabled={loading}
           />
 
           <button
@@ -295,6 +359,7 @@
             onclick={() => {
               showPassword = !showPassword;
             }}
+            disabled={loading}
           >
             {showPassword ? 'Hide' : 'Show'}
           </button>
@@ -305,13 +370,18 @@
         <button
           type="submit"
           class="primary-button"
+          disabled={loading}
         >
 
-          {mode === 'signin'
+          {loading 
+            ? 'Loading...'
+            : mode === 'signin'
             ? 'Sign in to Vcare'
             : 'Create my account'}
 
-          <span>→</span>
+          {#if !loading}
+            <span>→</span>
+          {/if}
 
         </button>
 
@@ -330,9 +400,8 @@
 
           <button
             type="button"
-            onclick={() => {
-              mode = 'signup';
-            }}
+            onclick={toggleMode}
+            disabled={loading}
           >
             Create an account
           </button>
@@ -345,9 +414,8 @@
 
           <button
             type="button"
-            onclick={() => {
-              mode = 'signin';
-            }}
+            onclick={toggleMode}
+            disabled={loading}
           >
             Sign in instead
           </button>

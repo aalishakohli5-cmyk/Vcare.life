@@ -1,15 +1,28 @@
 # Output
 dist/
 .svelte-kit/
+.vercel/
 
 # Dependencies
 node_modules/
+venv/
+.venv/
+
+# Python cache & artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
 
 # Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+logs/
+backend/logs/
+*.log
 
 # Vite
 vite.config.js.timestamp-*
