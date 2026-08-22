@@ -83,10 +83,12 @@
 			caregiverInitial = profile.full_name.charAt(0).toUpperCase();
 		}
 
-		// Fetch assigned senior
-		try {
-			const token = session?.access_token;
-			if (token && PUBLIC_BACKEND_URL) {
+		let seniors = [];
+		const token = session?.access_token;
+
+		// 1. Try Backend API
+		if (token && PUBLIC_BACKEND_URL) {
+			try {
 				const response = await fetch(
 					`${PUBLIC_BACKEND_URL}/caregiver/${user.id}/seniors`,
 					{
@@ -98,45 +100,79 @@
 				);
 
 				if (response.ok) {
-					const seniors = await response.json();
-					if (seniors.length > 0) {
-						const firstSenior = seniors[0];
-						senior.id = firstSenior.id;
-						senior.name = firstSenior.full_name || 'Senior';
-						senior.firstName = (firstSenior.full_name || 'Senior').split(' ')[0];
-						senior.initials = (firstSenior.full_name || 'S')
-							.split(' ')
-							.map(n => n.charAt(0))
-							.join('')
-							.toUpperCase();
-						senior.phone = firstSenior.phone || '';
+					seniors = await response.json();
+				}
+			} catch (err) {
+				console.warn('Backend senior fetch failed, falling back to Supabase:', err);
+			}
+		}
 
-						await loadMedications(firstSenior.id, token);
+		// 2. Direct Supabase query fallback
+		if (!seniors || seniors.length === 0) {
+			try {
+				const { data: links } = await supabase
+					.from('caregiver_links')
+					.select('senior_id')
+					.eq('caregiver_id', user.id);
 
-						// Setup Realtime
-						medChannel = supabase
-							.channel(`caregiver-meds-${firstSenior.id}`)
-							.on(
-								'postgres_changes',
-								{
-									event: '*',
-									schema: 'public',
-									table: 'medications',
-									filter: `senior_id=eq.${firstSenior.id}`
-								},
-								() => {
-									loadMedications(firstSenior.id, token);
-								}
-							)
-							.subscribe();
+				if (links && links.length > 0) {
+					const seniorIds = links.map(l => l.senior_id);
+					const { data: profiles } = await supabase
+						.from('profiles')
+						.select('*')
+						.in('id', seniorIds);
+
+					if (profiles && profiles.length > 0) {
+						seniors = profiles;
 					}
 				}
+			} catch (err) {
+				console.error('Supabase direct senior query error:', err);
 			}
-		} catch (err) {
-			console.error('Error fetching senior/medications:', err);
-		} finally {
-			loading = false;
+
+			if ((!seniors || seniors.length === 0) && profile?.emergency_contact_name) {
+				seniors = [{
+					id: user.id,
+					full_name: profile.emergency_contact_name,
+					phone: profile.emergency_contact_phone || '',
+					role: 'senior'
+				}];
+			}
 		}
+
+		if (seniors && seniors.length > 0) {
+			const firstSenior = seniors[0];
+			senior.id = firstSenior.id;
+			senior.name = firstSenior.full_name || 'Senior';
+			senior.firstName = (firstSenior.full_name || 'Senior').split(' ')[0];
+			senior.initials = (firstSenior.full_name || 'S')
+				.split(' ')
+				.map(n => n.charAt(0))
+				.join('')
+				.toUpperCase();
+			senior.phone = firstSenior.phone || '';
+
+			await loadMedications(firstSenior.id, token);
+
+			// Setup Realtime
+			medChannel = supabase
+				.channel(`caregiver-meds-${firstSenior.id}`)
+				.on(
+					'postgres_changes',
+					{
+						event: '*',
+						schema: 'public',
+						table: 'medications',
+						filter: `senior_id=eq.${firstSenior.id}`
+					},
+					() => {
+						loadMedications(firstSenior.id, token);
+					}
+				)
+				.subscribe();
+		}
+
+		loading = false;
 
 		return () => {
 			clearInterval(clock);
@@ -145,36 +181,54 @@
 	});
 
 	async function loadMedications(seniorId, token) {
-		try {
-			const medResponse = await fetch(
-				`${PUBLIC_BACKEND_URL}/medications/${seniorId}`,
-				{
-					headers: {
-						'Authorization': `Bearer ${token}`,
-						'Content-Type': 'application/json'
-					}
-				}
-			);
+		let medData = [];
 
-			if (medResponse.ok) {
-				const data = await medResponse.json();
-				medications = data.map(m => ({
-					id: m.id,
-					name: m.name,
-					dosage: m.dosage,
-					scheduled_time: m.scheduled_time,
-					taken: m.taken,
-					status: m.taken ? 'taken' : 'pending'
-				}));
+		if (token && PUBLIC_BACKEND_URL) {
+			try {
+				const medResponse = await fetch(
+					`${PUBLIC_BACKEND_URL}/medications/${seniorId}`,
+					{
+						headers: {
+							'Authorization': `Bearer ${token}`,
+							'Content-Type': 'application/json'
+						}
+					}
+				);
+
+				if (medResponse.ok) {
+					medData = await medResponse.json();
+				}
+			} catch (e) {
+				console.warn('Backend loadMedications failed, falling back to Supabase:', e);
 			}
-		} catch (e) {
-			console.error('Failed to load medications:', e);
 		}
+
+		if (!medData || medData.length === 0) {
+			try {
+				const { data: sbMeds } = await supabase
+					.from('medications')
+					.select('*')
+					.eq('senior_id', seniorId)
+					.order('scheduled_time', { ascending: true });
+				if (sbMeds) medData = sbMeds;
+			} catch (e) {
+				console.error('Failed to load medications from Supabase:', e);
+			}
+		}
+
+		medications = (medData || []).map(m => ({
+			id: m.id,
+			name: m.name,
+			dosage: m.dosage,
+			scheduled_time: m.scheduled_time,
+			taken: m.taken,
+			status: m.taken ? 'taken' : 'pending'
+		}));
 	}
 
 	/* =====================================================
 	   ACTIONS
-	==================================================== */
+	===================================================== */
 
 	async function toggleMedication(med) {
 		const newStatus = !med.taken;
@@ -187,26 +241,44 @@
 			const { data: { session } } = await supabase.auth.getSession();
 			const token = session?.access_token;
 
-			const response = await fetch(`${PUBLIC_BACKEND_URL}/medications/${med.id}`, {
-				method: 'PUT',
-				headers: {
-					'Authorization': `Bearer ${token}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					taken: newStatus,
-					taken_at: newStatus ? new Date().toISOString() : null
-				})
-			});
+			let updated = false;
 
-			if (!response.ok) {
-				// Revert on failure
-				medications = medications.map(m =>
-					m.id === med.id ? { ...m, taken: !newStatus, status: !newStatus ? 'taken' : 'pending' } : m
-				);
+			if (token && PUBLIC_BACKEND_URL) {
+				try {
+					const response = await fetch(`${PUBLIC_BACKEND_URL}/medications/${med.id}`, {
+						method: 'PUT',
+						headers: {
+							'Authorization': `Bearer ${token}`,
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							taken: newStatus,
+							taken_at: newStatus ? new Date().toISOString() : null
+						})
+					});
+					if (response.ok) updated = true;
+				} catch (e) {
+					console.warn('Backend update failed:', e);
+				}
+			}
+
+			if (!updated) {
+				const { error } = await supabase
+					.from('medications')
+					.update({
+						taken: newStatus,
+						taken_at: newStatus ? new Date().toISOString() : null
+					})
+					.eq('id', med.id);
+
+				if (error) throw error;
 			}
 		} catch (err) {
 			console.error('Failed to update medication:', err);
+			// Revert on failure
+			medications = medications.map(m =>
+				m.id === med.id ? { ...m, taken: !newStatus, status: !newStatus ? 'taken' : 'pending' } : m
+			);
 		}
 	}
 
@@ -227,22 +299,54 @@
 			const { data: { session } } = await supabase.auth.getSession();
 			const token = session?.access_token;
 
-			const response = await fetch(`${PUBLIC_BACKEND_URL}/medications/`, {
-				method: 'POST',
-				headers: {
-					'Authorization': `Bearer ${token}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					senior_id: senior.id,
-					name: newMedName.trim(),
-					dosage: newMedDosage.trim() || 'As prescribed',
-					scheduled_time: newMedTime.trim()
-				})
-			});
+			let added = false;
+			let newMed = null;
 
-			if (response.ok) {
-				const newMed = await response.json();
+			if (token && PUBLIC_BACKEND_URL) {
+				try {
+					const response = await fetch(`${PUBLIC_BACKEND_URL}/medications/`, {
+						method: 'POST',
+						headers: {
+							'Authorization': `Bearer ${token}`,
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							senior_id: senior.id,
+							name: newMedName.trim(),
+							dosage: newMedDosage.trim() || 'As prescribed',
+							scheduled_time: newMedTime.trim()
+						})
+					});
+
+					if (response.ok) {
+						newMed = await response.json();
+						added = true;
+					}
+				} catch (e) {
+					console.warn('Backend addMedication failed:', e);
+				}
+			}
+
+			if (!added) {
+				const { data: inserted, error: insErr } = await supabase
+					.from('medications')
+					.insert({
+						senior_id: senior.id,
+						name: newMedName.trim(),
+						dosage: newMedDosage.trim() || 'As prescribed',
+						scheduled_time: newMedTime.trim(),
+						taken: false,
+						taken_at: null
+					})
+					.select()
+					.single();
+
+				if (insErr) throw insErr;
+				newMed = inserted;
+				added = true;
+			}
+
+			if (added && newMed) {
 				medications = [...medications, {
 					id: newMed.id,
 					name: newMed.name,
@@ -255,13 +359,10 @@
 				newMedDosage = '';
 				newMedTime = '08:00 AM';
 				showAddModal = false;
-			} else {
-				const errData = await response.json().catch(() => ({}));
-				addError = errData.detail || 'Failed to add medication.';
 			}
 		} catch (err) {
 			console.error('Error adding medication:', err);
-			addError = 'Error connecting to server.';
+			addError = err.message || 'Error saving medication.';
 		} finally {
 			saving = false;
 		}
@@ -277,12 +378,24 @@
 			const { data: { session } } = await supabase.auth.getSession();
 			const token = session?.access_token;
 
-			await fetch(`${PUBLIC_BACKEND_URL}/medications/${medId}`, {
-				method: 'DELETE',
-				headers: {
-					'Authorization': `Bearer ${token}`
+			let deleted = false;
+			if (token && PUBLIC_BACKEND_URL) {
+				try {
+					const res = await fetch(`${PUBLIC_BACKEND_URL}/medications/${medId}`, {
+						method: 'DELETE',
+						headers: {
+							'Authorization': `Bearer ${token}`
+						}
+					});
+					if (res.ok) deleted = true;
+				} catch (e) {
+					console.warn('Backend delete failed:', e);
 				}
-			});
+			}
+
+			if (!deleted) {
+				await supabase.from('medications').delete().eq('id', medId);
+			}
 		} catch (err) {
 			console.error('Error deleting medication:', err);
 		}

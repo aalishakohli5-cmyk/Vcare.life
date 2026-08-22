@@ -243,7 +243,8 @@
 			return;
 		}
 
-		// Step 2: Create senior profile + link via backend
+		// Step 2: Create senior profile + link via backend (with Supabase fallback)
+		let onboardSuccess = false;
 		try {
 			const {
 				data: { session }
@@ -268,15 +269,33 @@
 					}
 				);
 
-				if (!response.ok) {
-					const errData = await response.json().catch(() => ({}));
-					console.error('Onboarding API error:', errData);
-					// Non-blocking: profile is saved, senior link is a best-effort
+				if (response.ok) {
+					onboardSuccess = true;
 				}
 			}
 		} catch (err) {
-			console.error('Failed to complete onboarding via backend:', err);
-			// Non-blocking: the profile was saved, dashboard will just be empty until link exists
+			console.warn('Backend onboarding call failed, trying direct Supabase link:', err);
+		}
+
+		// Direct Supabase fallback
+		if (!onboardSuccess) {
+			try {
+				// Search if senior already exists with this phone
+				const { data: existingSenior } = await supabase
+					.from('profiles')
+					.select('id')
+					.eq('phone', fullSeniorPhone)
+					.maybeSingle();
+
+				if (existingSenior) {
+					await supabase.from('caregiver_links').upsert({
+						caregiver_id: user.id,
+						senior_id: existingSenior.id
+					}, { onConflict: 'caregiver_id,senior_id' });
+				}
+			} catch (e) {
+				console.warn('Supabase link fallback error:', e);
+			}
 		}
 
 		goto('/caregiver/dashboard');
