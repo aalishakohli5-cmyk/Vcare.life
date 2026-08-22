@@ -7,7 +7,7 @@
 </svelte:head>
 
 <script>
-  let medicines = [
+  let medicines = $state([
     {
       name: "Morning Medicine",
       time: "8:00 AM",
@@ -28,9 +28,9 @@
       time: "5:00 PM",
       status: "pending"
     }
-  ];
+  ]);
 
-  let mood = "Happy";
+  let mood = $state("Happy");
 
   function markTaken(index) {
     medicines[index].status = "taken";

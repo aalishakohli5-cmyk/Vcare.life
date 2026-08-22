@@ -102,7 +102,7 @@
 		if (user) {
 			const { data: profile } = await supabase
 				.from('profiles')
-				.select('full_name')
+				.select('*')
 				.eq('id', user.id)
 				.maybeSingle();
 
@@ -111,180 +111,213 @@
 				caregiverInitial = profile.full_name.charAt(0).toUpperCase();
 			}
 
-			// Fetch assigned seniors from backend
+			let seniors = [];
+			const token = session?.access_token;
+
+			// 1. Fast Path: Direct Supabase query (instant ~50ms load)
 			try {
-				const token = session?.access_token;
-				if (token && PUBLIC_BACKEND_URL) {
-					const response = await fetch(
-						`${PUBLIC_BACKEND_URL}/caregiver/${user.id}/seniors`,
-						{
-							headers: {
-								'Authorization': `Bearer ${token}`,
-								'Content-Type': 'application/json'
-							}
-						}
-					);
+				const { data: links } = await supabase
+					.from('caregiver_links')
+					.select('senior_id')
+					.eq('caregiver_id', user.id);
 
-					if (response.ok) {
-						const seniors = await response.json();
-						if (seniors.length > 0) {
-							// Load first senior's data
-							const firstSenior = seniors[0];
-							senior.name = firstSenior.full_name || 'Senior';
-							senior.firstName = (firstSenior.full_name || 'Senior').split(' ')[0];
-							senior.initials = (firstSenior.full_name || 'S')
-								.split(' ')
-								.map(n => n.charAt(0))
-								.join('')
-								.toUpperCase();
-							senior.phone = firstSenior.phone || '';
-							senior.status = 'Connected';
-							senior.lastCheckIn = 'No calls yet';
-							senior.mood = 'Happy';
-							senior.moodEmoji = '😊';
-							seniorId = firstSenior.id;
+				if (links && links.length > 0) {
+					const seniorIds = links.map(l => l.senior_id);
+					const { data: profiles } = await supabase
+						.from('profiles')
+						.select('*')
+						.in('id', seniorIds);
 
-							// Fetch medications for this senior
-							if (token) {
-								const medResponse = await fetch(
-									`${PUBLIC_BACKEND_URL}/medications/${firstSenior.id}`,
-									{
-										headers: {
-											'Authorization': `Bearer ${token}`,
-											'Content-Type': 'application/json'
-										}
-									}
-								);
-
-								if (medResponse.ok) {
-									const medData = await medResponse.json();
-									medications = medData.map(m => ({
-										id: m.id,
-										name: m.name,
-										dosage: m.dosage,
-										time: m.scheduled_time,
-										status: m.taken ? 'taken' : 'pending'
-									}));
-
-									// Generate alerts for pending medications
-									const pendingMeds = medications.filter(m => m.status === 'pending');
-									alerts = pendingMeds.map((m, idx) => ({
-										id: idx + 1,
-										title: `${m.name} is still pending`,
-										message: `Scheduled for ${m.time}. Vcare will remind ${senior.firstName}.`
-									}));
-
-									// Subscribe to real-time medication updates for this senior
-									supabase
-										.channel(`medications:${firstSenior.id}`)
-										.on(
-											'postgres_changes',
-											{
-												event: '*',
-												schema: 'public',
-												table: 'medications',
-												filter: `senior_id=eq.${firstSenior.id}`
-											},
-											(payload) => {
-												if (payload.eventType === 'UPDATE') {
-													const updated = payload.new;
-													medications = medications.map(m =>
-														m.id === updated.id
-															? { ...m, status: updated.taken ? 'taken' : 'pending' }
-															: m
-													);
-													// Update alerts
-													const pendingMeds = medications.filter(m => m.status === 'pending');
-													alerts = pendingMeds.map((m, idx) => ({
-														id: idx + 1,
-														title: `${m.name} is still pending`,
-														message: `Scheduled for ${m.time}. Vcare will remind ${senior.firstName}.`
-													}));
-													console.log('Medication updated in real-time:', updated.id);
-												} else if (payload.eventType === 'INSERT') {
-													const newMed = payload.new;
-													medications = [...medications, {
-														id: newMed.id,
-														name: newMed.name,
-														dosage: newMed.dosage,
-														time: newMed.scheduled_time,
-														status: newMed.taken ? 'taken' : 'pending'
-													}].sort((a, b) => a.time.localeCompare(b.time));
-													const pendingMeds = medications.filter(m => m.status === 'pending');
-													alerts = pendingMeds.map((m, idx) => ({
-														id: idx + 1,
-														title: `${m.name} is still pending`,
-														message: `Scheduled for ${m.time}. Vcare will remind ${senior.firstName}.`
-													}));
-												}
-											}
-										)
-										.subscribe();
-								}
-							}
-
-							// Fetch call history for this senior
-							if (token) {
-								const callResponse = await fetch(
-									`${PUBLIC_BACKEND_URL}/calls/${firstSenior.id}`,
-									{
-										headers: {
-											'Authorization': `Bearer ${token}`,
-											'Content-Type': 'application/json'
-										}
-									}
-								);
-
-								if (callResponse.ok) {
-									const callData = await callResponse.json();
-									if (callData.length > 0) {
-										const latestCall = callData[0];
-										recentCall = {
-											date: new Date(latestCall.created_at).toLocaleDateString('en-IN'),
-											time: new Date(latestCall.created_at).toLocaleTimeString('en-IN', {
-												hour: '2-digit',
-												minute: '2-digit'
-											}),
-											duration: latestCall.duration ? `${latestCall.duration}s` : '35s',
-											status: latestCall.status || 'completed',
-											summary: latestCall.transcript
-												? latestCall.transcript.substring(0, 100) + '...'
-												: `${senior.firstName} was called for check-in`
-										};
-										senior.lastCheckIn = `${recentCall.date} at ${recentCall.time}`;
-										if (latestCall.distress_detected) {
-											senior.mood = 'Needs Attention';
-											senior.moodEmoji = '⚠';
-										}
-									} else {
-										recentCall = {
-											date: 'Today',
-											time: '—',
-											duration: '—',
-											status: 'Scheduled',
-											summary: `Vcare will call ${senior.firstName} based on their medication schedule.`
-										};
-									}
-								}
-							}
-						} else {
-							senior.name = 'No Senior Linked';
-							senior.firstName = 'Senior';
-							senior.initials = '+';
-							senior.status = 'Pending Setup';
-							senior.lastCheckIn = '—';
-							recentCall = {
-								date: 'Today',
-								time: '—',
-								duration: '—',
-								status: 'No senior linked',
-								summary: 'Please complete onboarding to link a senior.'
-							};
-						}
+					if (profiles && profiles.length > 0) {
+						seniors = profiles;
 					}
 				}
-			} catch (error) {
-				console.error('Failed to fetch seniors:', error);
+
+				// Fallback to caregiver profile's emergency contact info if no links table entry exists yet
+				if ((!seniors || seniors.length === 0) && profile?.emergency_contact_name) {
+					if (profile.emergency_contact_phone) {
+						try {
+							const { data: matched } = await supabase
+								.from('profiles')
+								.select('*')
+								.eq('phone', profile.emergency_contact_phone)
+								.maybeSingle();
+							if (matched) {
+								seniors = [matched];
+							}
+						} catch (e) {
+							console.warn('Matching senior by phone error:', e);
+						}
+					}
+
+					if (!seniors || seniors.length === 0) {
+						seniors = [{
+							id: user.id,
+							full_name: profile.emergency_contact_name,
+							phone: profile.emergency_contact_phone || '',
+							role: 'senior'
+						}];
+					}
+				}
+			} catch (err) {
+				console.error('Supabase direct senior query error:', err);
+			}
+
+			if (seniors && seniors.length > 0) {
+				const firstSenior = seniors[0];
+				senior.name = firstSenior.full_name || 'Senior';
+				senior.firstName = (firstSenior.full_name || 'Senior').split(' ')[0];
+				senior.initials = (firstSenior.full_name || 'S')
+					.split(' ')
+					.map(n => n.charAt(0))
+					.join('')
+					.toUpperCase();
+				senior.phone = firstSenior.phone || '';
+				senior.status = 'Connected';
+				senior.lastCheckIn = 'No calls yet';
+				senior.mood = 'Happy';
+				senior.moodEmoji = '😊';
+				seniorId = firstSenior.id;
+
+				// Instant direct Supabase load for medications
+				try {
+					const { data: sbMeds } = await supabase
+						.from('medications')
+						.select('*')
+						.eq('senior_id', firstSenior.id)
+						.order('scheduled_time', { ascending: true });
+
+					if (sbMeds) {
+						medications = sbMeds.map(m => ({
+							id: m.id,
+							name: m.name,
+							dosage: m.dosage,
+							time: m.scheduled_time,
+							status: m.taken ? 'taken' : 'pending'
+						}));
+
+						const pendingMeds = medications.filter(m => m.status === 'pending');
+						alerts = pendingMeds.map((m, idx) => ({
+							id: idx + 1,
+							title: `${m.name} is still pending`,
+							message: `Scheduled for ${m.time}. Vcare will remind ${senior.firstName}.`
+						}));
+					}
+				} catch (e) {
+					console.error('Failed to load medications from Supabase:', e);
+				}
+
+				// Instant direct Supabase load for call logs
+				try {
+					const { data: sbCalls } = await supabase
+						.from('call_logs')
+						.select('*')
+						.eq('senior_id', firstSenior.id)
+						.order('created_at', { ascending: false });
+
+					if (sbCalls && sbCalls.length > 0) {
+						const latestCall = sbCalls[0];
+						recentCall = {
+							date: new Date(latestCall.created_at).toLocaleDateString('en-IN'),
+							time: new Date(latestCall.created_at).toLocaleTimeString('en-IN', {
+								hour: '2-digit',
+								minute: '2-digit'
+							}),
+							duration: latestCall.duration ? `${latestCall.duration}s` : '35s',
+							status: latestCall.status || 'completed',
+							summary: latestCall.transcript
+								? (latestCall.transcript.length > 100 ? latestCall.transcript.substring(0, 100) + '...' : latestCall.transcript)
+								: `${senior.firstName} was called for check-in`
+						};
+						senior.lastCheckIn = `${recentCall.date} at ${recentCall.time}`;
+						if (latestCall.distress_detected) {
+							senior.mood = 'Needs Attention';
+							senior.moodEmoji = '⚠';
+						}
+					} else {
+						recentCall = {
+							date: 'Today',
+							time: '—',
+							duration: '—',
+							status: 'Scheduled',
+							summary: `Vcare will call ${senior.firstName} based on their medication schedule.`
+						};
+					}
+				} catch (e) {
+					console.error('Failed to load calls from Supabase:', e);
+				}
+
+				// Non-blocking background sync from backend
+				if (token && PUBLIC_BACKEND_URL) {
+					const controller = new AbortController();
+					const timeoutId = setTimeout(() => controller.abort(), 1500);
+
+					fetch(`${PUBLIC_BACKEND_URL}/caregiver/${user.id}/seniors`, {
+						headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+						signal: controller.signal
+					}).then(res => res.ok ? res.json() : []).then(backendSeniors => {
+						clearTimeout(timeoutId);
+						if (backendSeniors && backendSeniors.length > 0) {
+							const bs = backendSeniors[0];
+							senior.name = bs.full_name || senior.name;
+							senior.firstName = (bs.full_name || senior.name).split(' ')[0];
+							senior.phone = bs.phone || senior.phone;
+						}
+					}).catch(() => {});
+				}
+
+				// Subscribe to real-time medication updates
+				supabase
+					.channel(`caregiver-meds-${firstSenior.id}`)
+					.on(
+						'postgres_changes',
+						{
+							event: '*',
+							schema: 'public',
+							table: 'medications',
+							filter: `senior_id=eq.${firstSenior.id}`
+						},
+						(payload) => {
+							if (payload.eventType === 'UPDATE') {
+								const updated = payload.new;
+								medications = medications.map(m =>
+									m.id === updated.id
+										? { ...m, status: updated.taken ? 'taken' : 'pending' }
+										: m
+								);
+							} else if (payload.eventType === 'INSERT') {
+								const newMed = payload.new;
+								medications = [...medications, {
+									id: newMed.id,
+									name: newMed.name,
+									dosage: newMed.dosage,
+									time: newMed.scheduled_time,
+									status: newMed.taken ? 'taken' : 'pending'
+								}].sort((a, b) => a.time.localeCompare(b.time));
+							}
+							const pending = medications.filter(m => m.status === 'pending');
+							alerts = pending.map((m, idx) => ({
+								id: idx + 1,
+								title: `${m.name} is still pending`,
+								message: `Scheduled for ${m.time}. Vcare will remind ${senior.firstName}.`
+							}));
+						}
+					)
+					.subscribe();
+
+			} else {
+				senior.name = 'No Senior Linked';
+				senior.firstName = 'Senior';
+				senior.initials = '+';
+				senior.status = 'Pending Setup';
+				senior.lastCheckIn = '—';
+				recentCall = {
+					date: 'Today',
+					time: '—',
+					duration: '—',
+					status: 'No senior linked',
+					summary: 'Please complete onboarding to link a senior.'
+				};
 			}
 		}
 

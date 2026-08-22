@@ -71,7 +71,7 @@
 		// Fetch caregiver profile
 		const { data: profile } = await supabase
 			.from('profiles')
-			.select('full_name, phone')
+			.select('*')
 			.eq('id', user.id)
 			.maybeSingle();
 
@@ -81,60 +81,91 @@
 		}
 
 		// Fetch assigned senior
+		let seniors = [];
+		const token = session?.access_token;
+
+		// 1. Fast Path: Direct Supabase query (instant ~50ms load)
 		try {
-			const token = session?.access_token;
-			if (token && PUBLIC_BACKEND_URL) {
-				const response = await fetch(
-					`${PUBLIC_BACKEND_URL}/caregiver/${user.id}/seniors`,
-					{
-						headers: {
-							'Authorization': `Bearer ${token}`,
-							'Content-Type': 'application/json'
+			const { data: links } = await supabase
+				.from('caregiver_links')
+				.select('senior_id')
+				.eq('caregiver_id', user.id);
+
+			if (links && links.length > 0) {
+				const seniorIds = links.map(l => l.senior_id);
+				const { data: profiles } = await supabase
+					.from('profiles')
+					.select('*')
+					.in('id', seniorIds);
+
+				if (profiles && profiles.length > 0) {
+					seniors = profiles;
+				}
+			}
+
+			if ((!seniors || seniors.length === 0) && profile?.emergency_contact_name) {
+				if (profile.emergency_contact_phone) {
+					try {
+						const { data: matched } = await supabase
+							.from('profiles')
+							.select('*')
+							.eq('phone', profile.emergency_contact_phone)
+							.maybeSingle();
+						if (matched) {
+							seniors = [matched];
 						}
+					} catch (e) {
+						console.warn('Matching senior by phone error:', e);
 					}
-				);
+				}
 
-				if (response.ok) {
-					const seniors = await response.json();
-					if (seniors.length > 0) {
-						const firstSenior = seniors[0];
-						senior = {
-							id: firstSenior.id,
-							full_name: firstSenior.full_name || '',
-							phone: firstSenior.phone || '',
-							date_of_birth: firstSenior.date_of_birth || '',
-							gender: firstSenior.gender || '',
-							preferred_language: firstSenior.preferred_language || 'English',
-							emergency_contact_name: firstSenior.emergency_contact_name || caregiverName,
-							emergency_contact_relationship: firstSenior.emergency_contact_relationship || 'Caregiver',
-							emergency_contact_phone: firstSenior.emergency_contact_phone || (profile?.phone || ''),
-							role: 'senior'
-						};
-
-						// Fetch counts
-						const medRes = await fetch(`${PUBLIC_BACKEND_URL}/medications/${firstSenior.id}`, {
-							headers: { 'Authorization': `Bearer ${token}` }
-						});
-						if (medRes.ok) {
-							const meds = await medRes.json();
-							medCount = meds.length;
-						}
-
-						const callRes = await fetch(`${PUBLIC_BACKEND_URL}/calls/${firstSenior.id}`, {
-							headers: { 'Authorization': `Bearer ${token}` }
-						});
-						if (callRes.ok) {
-							const calls = await callRes.json();
-							callCount = calls.length;
-						}
-					}
+				if (!seniors || seniors.length === 0) {
+					seniors = [{
+						id: user.id,
+						full_name: profile.emergency_contact_name,
+						phone: profile.emergency_contact_phone || '',
+						role: 'senior'
+					}];
 				}
 			}
 		} catch (err) {
-			console.error('Error loading senior profile:', err);
-		} finally {
-			loading = false;
+			console.error('Supabase direct senior query error:', err);
 		}
+
+		if (seniors && seniors.length > 0) {
+			const firstSenior = seniors[0];
+			senior = {
+				id: firstSenior.id,
+				full_name: firstSenior.full_name || '',
+				phone: firstSenior.phone || '',
+				date_of_birth: firstSenior.date_of_birth || '',
+				gender: firstSenior.gender || '',
+				preferred_language: firstSenior.preferred_language || 'English',
+				emergency_contact_name: firstSenior.emergency_contact_name || caregiverName,
+				emergency_contact_relationship: firstSenior.emergency_contact_relationship || 'Caregiver',
+				emergency_contact_phone: firstSenior.emergency_contact_phone || (profile?.phone || ''),
+				role: 'senior'
+			};
+
+			// Fast load counts from Supabase directly
+			try {
+				const { data: sbMeds } = await supabase
+					.from('medications')
+					.select('id')
+					.eq('senior_id', firstSenior.id);
+				if (sbMeds) medCount = sbMeds.length;
+
+				const { data: sbCalls } = await supabase
+					.from('call_logs')
+					.select('id')
+					.eq('senior_id', firstSenior.id);
+				if (sbCalls) callCount = sbCalls.length;
+			} catch (e) {
+				console.error('Failed to load counts from Supabase:', e);
+			}
+		}
+
+		loading = false;
 
 		return () => clearInterval(clock);
 	});
@@ -152,41 +183,63 @@
 			const { data: { session } } = await supabase.auth.getSession();
 			const token = session?.access_token;
 
-			const response = await fetch(`${PUBLIC_BACKEND_URL}/seniors/${senior.id}`, {
-				method: 'PUT',
-				headers: {
-					'Authorization': `Bearer ${token}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					full_name: senior.full_name,
-					phone: senior.phone,
-					date_of_birth: senior.date_of_birth || null,
-					gender: senior.gender || null,
-					preferred_language: senior.preferred_language,
-					emergency_contact_name: senior.emergency_contact_name,
-					emergency_contact_relationship: senior.emergency_contact_relationship,
-					emergency_contact_phone: senior.emergency_contact_phone
-				})
-			});
+			let saved = false;
 
-			if (response.ok) {
+			if (token && PUBLIC_BACKEND_URL) {
+				try {
+					const response = await fetch(`${PUBLIC_BACKEND_URL}/seniors/${senior.id}`, {
+						method: 'PUT',
+						headers: {
+							'Authorization': `Bearer ${token}`,
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							full_name: senior.full_name,
+							phone: senior.phone,
+							date_of_birth: senior.date_of_birth || null,
+							gender: senior.gender || null,
+							preferred_language: senior.preferred_language,
+							emergency_contact_name: senior.emergency_contact_name,
+							emergency_contact_relationship: senior.emergency_contact_relationship,
+							emergency_contact_phone: senior.emergency_contact_phone
+						})
+					});
+					if (response.ok) saved = true;
+				} catch (e) {
+					console.warn('Backend save profile failed, falling back to Supabase:', e);
+				}
+			}
+
+			if (!saved) {
+				const { error: sbErr } = await supabase
+					.from('profiles')
+					.update({
+						full_name: senior.full_name,
+						phone: senior.phone,
+						date_of_birth: senior.date_of_birth || null,
+						gender: senior.gender || null,
+						preferred_language: senior.preferred_language,
+						emergency_contact_name: senior.emergency_contact_name,
+						emergency_contact_relationship: senior.emergency_contact_relationship,
+						emergency_contact_phone: senior.emergency_contact_phone
+					})
+					.eq('id', senior.id);
+
+				if (sbErr) throw sbErr;
+				saved = true;
+			}
+
+			if (saved) {
 				saveStatus = {
 					type: 'success',
 					message: '✓ Senior profile updated successfully!'
-				};
-			} else {
-				const errData = await response.json().catch(() => ({}));
-				saveStatus = {
-					type: 'error',
-					message: errData.detail || 'Failed to save changes.'
 				};
 			}
 		} catch (err) {
 			console.error('Error updating profile:', err);
 			saveStatus = {
 				type: 'error',
-				message: 'Network error saving senior profile.'
+				message: err.message || 'Error saving senior profile.'
 			};
 		} finally {
 			saving = false;

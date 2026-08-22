@@ -11,7 +11,7 @@ export default {
   },
   kit: {
     adapter: adapter({
-      runtime: 'nodejs18.x'
+      runtime: 'nodejs20.x'
     }),
     alias: {
       "$asset": "src/lib/assets",
