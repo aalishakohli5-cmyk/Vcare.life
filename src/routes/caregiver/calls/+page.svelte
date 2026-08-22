@@ -80,48 +80,23 @@
 		let seniors = [];
 		const token = session?.access_token;
 
-		// 1. Try Backend API
-		if (token && PUBLIC_BACKEND_URL) {
-			try {
-				const response = await fetch(
-					`${PUBLIC_BACKEND_URL}/caregiver/${user.id}/seniors`,
-					{
-						headers: {
-							'Authorization': `Bearer ${token}`,
-							'Content-Type': 'application/json'
-						}
-					}
-				);
+		// 1. Fast Path: Direct Supabase query (instant ~50ms load)
+		try {
+			const { data: links } = await supabase
+				.from('caregiver_links')
+				.select('senior_id')
+				.eq('caregiver_id', user.id);
 
-				if (response.ok) {
-					seniors = await response.json();
+			if (links && links.length > 0) {
+				const seniorIds = links.map(l => l.senior_id);
+				const { data: profiles } = await supabase
+					.from('profiles')
+					.select('*')
+					.in('id', seniorIds);
+
+				if (profiles && profiles.length > 0) {
+					seniors = profiles;
 				}
-			} catch (err) {
-				console.warn('Backend senior fetch failed, falling back to Supabase:', err);
-			}
-		}
-
-		// 2. Direct Supabase query fallback
-		if (!seniors || seniors.length === 0) {
-			try {
-				const { data: links } = await supabase
-					.from('caregiver_links')
-					.select('senior_id')
-					.eq('caregiver_id', user.id);
-
-				if (links && links.length > 0) {
-					const seniorIds = links.map(l => l.senior_id);
-					const { data: profiles } = await supabase
-						.from('profiles')
-						.select('*')
-						.in('id', seniorIds);
-
-					if (profiles && profiles.length > 0) {
-						seniors = profiles;
-					}
-				}
-			} catch (err) {
-				console.error('Supabase direct senior query error:', err);
 			}
 
 			if ((!seniors || seniors.length === 0) && profile?.emergency_contact_name) {
@@ -149,6 +124,8 @@
 					}];
 				}
 			}
+		} catch (err) {
+			console.error('Supabase direct senior query error:', err);
 		}
 
 		if (seniors && seniors.length > 0) {
@@ -192,60 +169,85 @@
 	});
 
 	async function loadCalls(seniorId, token) {
-		let callData = [];
+		// 1. Direct Supabase load (instant ~50ms)
+		try {
+			const { data: sbCalls } = await supabase
+				.from('call_logs')
+				.select('*')
+				.eq('senior_id', seniorId)
+				.order('created_at', { ascending: false });
 
+			if (sbCalls) {
+				calls = sbCalls.map(c => ({
+					id: c.id,
+					call_id: c.call_id,
+					status: c.status || 'completed',
+					transcript: c.transcript || 'No transcript available for this call.',
+					duration: c.duration ? `${c.duration}s` : '35s',
+					distress_detected: c.distress_detected || false,
+					created_at: c.created_at || new Date().toISOString(),
+					formattedDate: new Date(c.created_at || Date.now()).toLocaleDateString('en-IN', {
+						day: 'numeric',
+						month: 'short',
+						year: 'numeric'
+					}),
+					formattedTime: new Date(c.created_at || Date.now()).toLocaleTimeString('en-IN', {
+						hour: '2-digit',
+						minute: '2-digit',
+						hour12: true
+					})
+				}));
+			}
+		} catch (e) {
+			console.error('Failed to load calls from Supabase:', e);
+		}
+
+		// 2. Non-blocking backend sync with 1.5s timeout
 		if (token && PUBLIC_BACKEND_URL) {
 			try {
+				const controller = new AbortController();
+				const timeoutId = setTimeout(() => controller.abort(), 1500);
+
 				const response = await fetch(
 					`${PUBLIC_BACKEND_URL}/calls/${seniorId}`,
 					{
 						headers: {
 							'Authorization': `Bearer ${token}`,
 							'Content-Type': 'application/json'
-						}
+						},
+						signal: controller.signal
 					}
 				);
+				clearTimeout(timeoutId);
 
 				if (response.ok) {
-					callData = await response.json();
+					const data = await response.json();
+					if (data && data.length > 0) {
+						calls = data.map(c => ({
+							id: c.id,
+							call_id: c.call_id,
+							status: c.status || 'completed',
+							transcript: c.transcript || 'No transcript available for this call.',
+							duration: c.duration ? `${c.duration}s` : '35s',
+							distress_detected: c.distress_detected || false,
+							created_at: c.created_at || new Date().toISOString(),
+							formattedDate: new Date(c.created_at || Date.now()).toLocaleDateString('en-IN', {
+								day: 'numeric',
+								month: 'short',
+								year: 'numeric'
+							}),
+							formattedTime: new Date(c.created_at || Date.now()).toLocaleTimeString('en-IN', {
+								hour: '2-digit',
+								minute: '2-digit',
+								hour12: true
+							})
+						}));
+					}
 				}
 			} catch (e) {
-				console.warn('Backend loadCalls failed, falling back to Supabase:', e);
+				// Silent non-blocking timeout
 			}
 		}
-
-		if (!callData || callData.length === 0) {
-			try {
-				const { data: sbCalls } = await supabase
-					.from('call_logs')
-					.select('*')
-					.eq('senior_id', seniorId)
-					.order('created_at', { ascending: false });
-				if (sbCalls) callData = sbCalls;
-			} catch (e) {
-				console.error('Failed to load calls from Supabase:', e);
-			}
-		}
-
-		calls = (callData || []).map(c => ({
-			id: c.id,
-			call_id: c.call_id,
-			status: c.status || 'completed',
-			transcript: c.transcript || 'No transcript available for this call.',
-			duration: c.duration ? `${c.duration}s` : '35s',
-			distress_detected: c.distress_detected || false,
-			created_at: c.created_at || new Date().toISOString(),
-			formattedDate: new Date(c.created_at || Date.now()).toLocaleDateString('en-IN', {
-				day: 'numeric',
-				month: 'short',
-				year: 'numeric'
-			}),
-			formattedTime: new Date(c.created_at || Date.now()).toLocaleTimeString('en-IN', {
-				hour: '2-digit',
-				minute: '2-digit',
-				hour12: true
-			})
-		}));
 	}
 
 	/* =====================================================

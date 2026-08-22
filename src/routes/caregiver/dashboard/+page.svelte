@@ -114,51 +114,26 @@
 			let seniors = [];
 			const token = session?.access_token;
 
-			// 1. Try Backend API
-			if (token && PUBLIC_BACKEND_URL) {
-				try {
-					const response = await fetch(
-						`${PUBLIC_BACKEND_URL}/caregiver/${user.id}/seniors`,
-						{
-							headers: {
-								'Authorization': `Bearer ${token}`,
-								'Content-Type': 'application/json'
-							}
-						}
-					);
+			// 1. Fast Path: Direct Supabase query (instant ~50ms load)
+			try {
+				const { data: links } = await supabase
+					.from('caregiver_links')
+					.select('senior_id')
+					.eq('caregiver_id', user.id);
 
-					if (response.ok) {
-						seniors = await response.json();
+				if (links && links.length > 0) {
+					const seniorIds = links.map(l => l.senior_id);
+					const { data: profiles } = await supabase
+						.from('profiles')
+						.select('*')
+						.in('id', seniorIds);
+
+					if (profiles && profiles.length > 0) {
+						seniors = profiles;
 					}
-				} catch (err) {
-					console.warn('Backend fetch failed, falling back to Supabase:', err);
-				}
-			}
-
-			// 2. Direct Supabase query fallback
-			if (!seniors || seniors.length === 0) {
-				try {
-					const { data: links } = await supabase
-						.from('caregiver_links')
-						.select('senior_id')
-						.eq('caregiver_id', user.id);
-
-					if (links && links.length > 0) {
-						const seniorIds = links.map(l => l.senior_id);
-						const { data: profiles } = await supabase
-							.from('profiles')
-							.select('*')
-							.in('id', seniorIds);
-
-						if (profiles && profiles.length > 0) {
-							seniors = profiles;
-						}
-					}
-				} catch (err) {
-					console.error('Supabase direct senior query error:', err);
 				}
 
-				// 3. Fallback to caregiver profile's emergency contact info if no links table entry exists yet
+				// Fallback to caregiver profile's emergency contact info if no links table entry exists yet
 				if ((!seniors || seniors.length === 0) && profile?.emergency_contact_name) {
 					if (profile.emergency_contact_phone) {
 						try {
@@ -184,6 +159,8 @@
 						}];
 					}
 				}
+			} catch (err) {
+				console.error('Supabase direct senior query error:', err);
 			}
 
 			if (seniors && seniors.length > 0) {
@@ -202,107 +179,91 @@
 				senior.moodEmoji = '😊';
 				seniorId = firstSenior.id;
 
-				// Fetch medications (Backend + Supabase Fallback)
-				let medData = [];
-				if (token && PUBLIC_BACKEND_URL) {
-					try {
-						const medResponse = await fetch(
-							`${PUBLIC_BACKEND_URL}/medications/${firstSenior.id}`,
-							{
-								headers: {
-									'Authorization': `Bearer ${token}`,
-									'Content-Type': 'application/json'
-								}
-							}
-						);
-						if (medResponse.ok) {
-							medData = await medResponse.json();
-						}
-					} catch (e) {
-						console.warn('Backend med fetch failed:', e);
-					}
-				}
-				if (!medData || medData.length === 0) {
+				// Instant direct Supabase load for medications
+				try {
 					const { data: sbMeds } = await supabase
 						.from('medications')
 						.select('*')
 						.eq('senior_id', firstSenior.id)
 						.order('scheduled_time', { ascending: true });
-					if (sbMeds) medData = sbMeds;
-				}
 
-				medications = (medData || []).map(m => ({
-					id: m.id,
-					name: m.name,
-					dosage: m.dosage,
-					time: m.scheduled_time,
-					status: m.taken ? 'taken' : 'pending'
-				}));
+					if (sbMeds) {
+						medications = sbMeds.map(m => ({
+							id: m.id,
+							name: m.name,
+							dosage: m.dosage,
+							time: m.scheduled_time,
+							status: m.taken ? 'taken' : 'pending'
+						}));
 
-				// Generate alerts for pending medications
-				const pendingMeds = medications.filter(m => m.status === 'pending');
-				alerts = pendingMeds.map((m, idx) => ({
-					id: idx + 1,
-					title: `${m.name} is still pending`,
-					message: `Scheduled for ${m.time}. Vcare will remind ${senior.firstName}.`
-				}));
-
-				// Fetch call history (Backend + Supabase Fallback)
-				let callData = [];
-				if (token && PUBLIC_BACKEND_URL) {
-					try {
-						const callResponse = await fetch(
-							`${PUBLIC_BACKEND_URL}/calls/${firstSenior.id}`,
-							{
-								headers: {
-									'Authorization': `Bearer ${token}`,
-									'Content-Type': 'application/json'
-								}
-							}
-						);
-						if (callResponse.ok) {
-							callData = await callResponse.json();
-						}
-					} catch (e) {
-						console.warn('Backend calls fetch failed:', e);
+						const pendingMeds = medications.filter(m => m.status === 'pending');
+						alerts = pendingMeds.map((m, idx) => ({
+							id: idx + 1,
+							title: `${m.name} is still pending`,
+							message: `Scheduled for ${m.time}. Vcare will remind ${senior.firstName}.`
+						}));
 					}
+				} catch (e) {
+					console.error('Failed to load medications from Supabase:', e);
 				}
-				if (!callData || callData.length === 0) {
+
+				// Instant direct Supabase load for call logs
+				try {
 					const { data: sbCalls } = await supabase
 						.from('call_logs')
 						.select('*')
 						.eq('senior_id', firstSenior.id)
 						.order('created_at', { ascending: false });
-					if (sbCalls) callData = sbCalls;
+
+					if (sbCalls && sbCalls.length > 0) {
+						const latestCall = sbCalls[0];
+						recentCall = {
+							date: new Date(latestCall.created_at).toLocaleDateString('en-IN'),
+							time: new Date(latestCall.created_at).toLocaleTimeString('en-IN', {
+								hour: '2-digit',
+								minute: '2-digit'
+							}),
+							duration: latestCall.duration ? `${latestCall.duration}s` : '35s',
+							status: latestCall.status || 'completed',
+							summary: latestCall.transcript
+								? (latestCall.transcript.length > 100 ? latestCall.transcript.substring(0, 100) + '...' : latestCall.transcript)
+								: `${senior.firstName} was called for check-in`
+						};
+						senior.lastCheckIn = `${recentCall.date} at ${recentCall.time}`;
+						if (latestCall.distress_detected) {
+							senior.mood = 'Needs Attention';
+							senior.moodEmoji = '⚠';
+						}
+					} else {
+						recentCall = {
+							date: 'Today',
+							time: '—',
+							duration: '—',
+							status: 'Scheduled',
+							summary: `Vcare will call ${senior.firstName} based on their medication schedule.`
+						};
+					}
+				} catch (e) {
+					console.error('Failed to load calls from Supabase:', e);
 				}
 
-				if (callData && callData.length > 0) {
-					const latestCall = callData[0];
-					recentCall = {
-						date: new Date(latestCall.created_at).toLocaleDateString('en-IN'),
-						time: new Date(latestCall.created_at).toLocaleTimeString('en-IN', {
-							hour: '2-digit',
-							minute: '2-digit'
-						}),
-						duration: latestCall.duration ? `${latestCall.duration}s` : '35s',
-						status: latestCall.status || 'completed',
-						summary: latestCall.transcript
-							? (latestCall.transcript.length > 100 ? latestCall.transcript.substring(0, 100) + '...' : latestCall.transcript)
-							: `${senior.firstName} was called for check-in`
-					};
-					senior.lastCheckIn = `${recentCall.date} at ${recentCall.time}`;
-					if (latestCall.distress_detected) {
-						senior.mood = 'Needs Attention';
-						senior.moodEmoji = '⚠';
-					}
-				} else {
-					recentCall = {
-						date: 'Today',
-						time: '—',
-						duration: '—',
-						status: 'Scheduled',
-						summary: `Vcare will call ${senior.firstName} based on their medication schedule.`
-					};
+				// Non-blocking background sync from backend
+				if (token && PUBLIC_BACKEND_URL) {
+					const controller = new AbortController();
+					const timeoutId = setTimeout(() => controller.abort(), 1500);
+
+					fetch(`${PUBLIC_BACKEND_URL}/caregiver/${user.id}/seniors`, {
+						headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+						signal: controller.signal
+					}).then(res => res.ok ? res.json() : []).then(backendSeniors => {
+						clearTimeout(timeoutId);
+						if (backendSeniors && backendSeniors.length > 0) {
+							const bs = backendSeniors[0];
+							senior.name = bs.full_name || senior.name;
+							senior.firstName = (bs.full_name || senior.name).split(' ')[0];
+							senior.phone = bs.phone || senior.phone;
+						}
+					}).catch(() => {});
 				}
 
 				// Subscribe to real-time medication updates

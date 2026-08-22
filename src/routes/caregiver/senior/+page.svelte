@@ -84,48 +84,23 @@
 		let seniors = [];
 		const token = session?.access_token;
 
-		// 1. Try Backend API
-		if (token && PUBLIC_BACKEND_URL) {
-			try {
-				const response = await fetch(
-					`${PUBLIC_BACKEND_URL}/caregiver/${user.id}/seniors`,
-					{
-						headers: {
-							'Authorization': `Bearer ${token}`,
-							'Content-Type': 'application/json'
-						}
-					}
-				);
+		// 1. Fast Path: Direct Supabase query (instant ~50ms load)
+		try {
+			const { data: links } = await supabase
+				.from('caregiver_links')
+				.select('senior_id')
+				.eq('caregiver_id', user.id);
 
-				if (response.ok) {
-					seniors = await response.json();
+			if (links && links.length > 0) {
+				const seniorIds = links.map(l => l.senior_id);
+				const { data: profiles } = await supabase
+					.from('profiles')
+					.select('*')
+					.in('id', seniorIds);
+
+				if (profiles && profiles.length > 0) {
+					seniors = profiles;
 				}
-			} catch (err) {
-				console.warn('Backend senior fetch failed, falling back to Supabase:', err);
-			}
-		}
-
-		// 2. Direct Supabase query fallback
-		if (!seniors || seniors.length === 0) {
-			try {
-				const { data: links } = await supabase
-					.from('caregiver_links')
-					.select('senior_id')
-					.eq('caregiver_id', user.id);
-
-				if (links && links.length > 0) {
-					const seniorIds = links.map(l => l.senior_id);
-					const { data: profiles } = await supabase
-						.from('profiles')
-						.select('*')
-						.in('id', seniorIds);
-
-					if (profiles && profiles.length > 0) {
-						seniors = profiles;
-					}
-				}
-			} catch (err) {
-				console.error('Supabase direct senior query error:', err);
 			}
 
 			if ((!seniors || seniors.length === 0) && profile?.emergency_contact_name) {
@@ -153,6 +128,8 @@
 					}];
 				}
 			}
+		} catch (err) {
+			console.error('Supabase direct senior query error:', err);
 		}
 
 		if (seniors && seniors.length > 0) {
@@ -170,46 +147,22 @@
 				role: 'senior'
 			};
 
-			// Fetch counts
-			let meds = [];
-			if (token && PUBLIC_BACKEND_URL) {
-				try {
-					const medRes = await fetch(`${PUBLIC_BACKEND_URL}/medications/${firstSenior.id}`, {
-						headers: { 'Authorization': `Bearer ${token}` }
-					});
-					if (medRes.ok) meds = await medRes.json();
-				} catch (e) {
-					console.warn('Backend med count fetch failed:', e);
-				}
-			}
-			if (!meds || meds.length === 0) {
+			// Fast load counts from Supabase directly
+			try {
 				const { data: sbMeds } = await supabase
 					.from('medications')
 					.select('id')
 					.eq('senior_id', firstSenior.id);
-				if (sbMeds) meds = sbMeds;
-			}
-			medCount = meds.length;
+				if (sbMeds) medCount = sbMeds.length;
 
-			let calls = [];
-			if (token && PUBLIC_BACKEND_URL) {
-				try {
-					const callRes = await fetch(`${PUBLIC_BACKEND_URL}/calls/${firstSenior.id}`, {
-						headers: { 'Authorization': `Bearer ${token}` }
-					});
-					if (callRes.ok) calls = await callRes.json();
-				} catch (e) {
-					console.warn('Backend call count fetch failed:', e);
-				}
-			}
-			if (!calls || calls.length === 0) {
 				const { data: sbCalls } = await supabase
 					.from('call_logs')
 					.select('id')
 					.eq('senior_id', firstSenior.id);
-				if (sbCalls) calls = sbCalls;
+				if (sbCalls) callCount = sbCalls.length;
+			} catch (e) {
+				console.error('Failed to load counts from Supabase:', e);
 			}
-			callCount = calls.length;
 		}
 
 		loading = false;

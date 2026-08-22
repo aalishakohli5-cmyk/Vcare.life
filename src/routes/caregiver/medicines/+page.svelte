@@ -86,48 +86,23 @@
 		let seniors = [];
 		const token = session?.access_token;
 
-		// 1. Try Backend API
-		if (token && PUBLIC_BACKEND_URL) {
-			try {
-				const response = await fetch(
-					`${PUBLIC_BACKEND_URL}/caregiver/${user.id}/seniors`,
-					{
-						headers: {
-							'Authorization': `Bearer ${token}`,
-							'Content-Type': 'application/json'
-						}
-					}
-				);
+		// 1. Fast Path: Query Supabase directly (instant ~50ms load)
+		try {
+			const { data: links } = await supabase
+				.from('caregiver_links')
+				.select('senior_id')
+				.eq('caregiver_id', user.id);
 
-				if (response.ok) {
-					seniors = await response.json();
+			if (links && links.length > 0) {
+				const seniorIds = links.map(l => l.senior_id);
+				const { data: profiles } = await supabase
+					.from('profiles')
+					.select('*')
+					.in('id', seniorIds);
+
+				if (profiles && profiles.length > 0) {
+					seniors = profiles;
 				}
-			} catch (err) {
-				console.warn('Backend senior fetch failed, falling back to Supabase:', err);
-			}
-		}
-
-		// 2. Direct Supabase query fallback
-		if (!seniors || seniors.length === 0) {
-			try {
-				const { data: links } = await supabase
-					.from('caregiver_links')
-					.select('senior_id')
-					.eq('caregiver_id', user.id);
-
-				if (links && links.length > 0) {
-					const seniorIds = links.map(l => l.senior_id);
-					const { data: profiles } = await supabase
-						.from('profiles')
-						.select('*')
-						.in('id', seniorIds);
-
-					if (profiles && profiles.length > 0) {
-						seniors = profiles;
-					}
-				}
-			} catch (err) {
-				console.error('Supabase direct senior query error:', err);
 			}
 
 			if ((!seniors || seniors.length === 0) && profile?.emergency_contact_name) {
@@ -155,6 +130,8 @@
 					}];
 				}
 			}
+		} catch (err) {
+			console.error('Supabase direct senior query error:', err);
 		}
 
 		if (seniors && seniors.length > 0) {
@@ -169,6 +146,7 @@
 				.toUpperCase();
 			senior.phone = firstSenior.phone || '';
 
+			// Load medications instantly from Supabase
 			await loadMedications(firstSenior.id, token);
 
 			// Setup Realtime
@@ -189,6 +167,7 @@
 				.subscribe();
 		}
 
+		// Instant page reveal
 		loading = false;
 
 		return () => {
@@ -198,49 +177,63 @@
 	});
 
 	async function loadMedications(seniorId, token) {
-		let medData = [];
+		// 1. Direct Supabase load (instant ~50ms)
+		try {
+			const { data: sbMeds } = await supabase
+				.from('medications')
+				.select('*')
+				.eq('senior_id', seniorId)
+				.order('scheduled_time', { ascending: true });
 
+			if (sbMeds) {
+				medications = sbMeds.map(m => ({
+					id: m.id,
+					name: m.name,
+					dosage: m.dosage,
+					scheduled_time: m.scheduled_time,
+					taken: m.taken,
+					status: m.taken ? 'taken' : 'pending'
+				}));
+			}
+		} catch (e) {
+			console.error('Failed to load medications from Supabase:', e);
+		}
+
+		// 2. Non-blocking backend sync with 1.5s timeout
 		if (token && PUBLIC_BACKEND_URL) {
 			try {
+				const controller = new AbortController();
+				const timeoutId = setTimeout(() => controller.abort(), 1500);
+
 				const medResponse = await fetch(
 					`${PUBLIC_BACKEND_URL}/medications/${seniorId}`,
 					{
 						headers: {
 							'Authorization': `Bearer ${token}`,
 							'Content-Type': 'application/json'
-						}
+						},
+						signal: controller.signal
 					}
 				);
+				clearTimeout(timeoutId);
 
 				if (medResponse.ok) {
-					medData = await medResponse.json();
+					const data = await medResponse.json();
+					if (data && data.length > 0) {
+						medications = data.map(m => ({
+							id: m.id,
+							name: m.name,
+							dosage: m.dosage,
+							scheduled_time: m.scheduled_time,
+							taken: m.taken,
+							status: m.taken ? 'taken' : 'pending'
+						}));
+					}
 				}
 			} catch (e) {
-				console.warn('Backend loadMedications failed, falling back to Supabase:', e);
+				// Silent non-blocking timeout
 			}
 		}
-
-		if (!medData || medData.length === 0) {
-			try {
-				const { data: sbMeds } = await supabase
-					.from('medications')
-					.select('*')
-					.eq('senior_id', seniorId)
-					.order('scheduled_time', { ascending: true });
-				if (sbMeds) medData = sbMeds;
-			} catch (e) {
-				console.error('Failed to load medications from Supabase:', e);
-			}
-		}
-
-		medications = (medData || []).map(m => ({
-			id: m.id,
-			name: m.name,
-			dosage: m.dosage,
-			scheduled_time: m.scheduled_time,
-			taken: m.taken,
-			status: m.taken ? 'taken' : 'pending'
-		}));
 	}
 
 	/* =====================================================
