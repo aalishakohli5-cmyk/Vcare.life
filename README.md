@@ -1,4 +1,4 @@
-#  Vcare.life 💚
+#  Vcare.life 🩵💚
 They cared for us. Now we care for them.
 ## 👥 Team Members
 
