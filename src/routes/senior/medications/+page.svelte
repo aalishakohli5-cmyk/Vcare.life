@@ -370,36 +370,6 @@
 </svelte:head>
 
 <div class="page">
-	<aside class="senior-sidebar">
-		<a class="side-brand" href="/senior/dashboard">
-			<span class="side-logo">♥</span>
-			<span><strong>Vcare.life</strong><small>A Voice That Cares</small></span>
-		</a>
-
-		<nav class="side-nav" aria-label="Senior navigation">
-			<a href="/senior/dashboard"><span>⌂</span><div><strong>Home</strong><small>Your day at a glance</small></div></a>
-			<a href="/senior/medications" class="active"><span>✚</span><div><strong>Medicines</strong><small>Your medication plan</small></div></a>
-			<a href="/senior/reminder"><span>◷</span><div><strong>Reminders</strong><small>Your routine & plans</small></div></a>
-			<a href="/senior/Vcare"><span>☎</span><div><strong>Vcare Calls</strong><small>Calls & summaries</small></div></a>
-			<a href="/senior/care-circle"><span>♡</span><div><strong>Care Circle</strong><small>Your trusted people</small></div></a>
-		</nav>
-
-		<div class="side-note"><span>♡</span><div><strong>You’re doing well</strong><small>One step at a time.</small></div></div>
-	</aside>
-
-	<header class="topbar">
-		<div class="profile">
-			<div class="avatar">
-				{senior.firstName.charAt(0).toUpperCase()}
-			</div>
-
-			<div>
-				<strong>{senior.firstName}</strong>
-				<span>My medicines</span>
-			</div>
-		</div>
-	</header>
-
 	<main class="content">
 		<section class="hero">
 			<div>

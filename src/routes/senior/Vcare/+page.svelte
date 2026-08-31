@@ -60,37 +60,6 @@
 </svelte:head>
 
 <div class="page">
-	<aside class="senior-sidebar">
-		<a class="side-brand" href="/senior/dashboard">
-			<span class="side-logo">♥</span>
-			<span><strong>Vcare.life</strong><small>A Voice That Cares</small></span>
-		</a>
-
-		<nav class="side-nav" aria-label="Senior navigation">
-			<a href="/senior/dashboard"><span>⌂</span><div><strong>Home</strong><small>Your day at a glance</small></div></a>
-			<a href="/senior/medications"><span>✚</span><div><strong>Medicines</strong><small>Your medication plan</small></div></a>
-			<a href="/senior/reminder"><span>◷</span><div><strong>Reminders</strong><small>Your routine & plans</small></div></a>
-			<a href="/senior/Vcare" class="active"><span>☎</span><div><strong>Vcare Calls</strong><small>Calls & summaries</small></div></a>
-			<a href="/senior/care-circle"><span>♡</span><div><strong>Care Circle</strong><small>Your trusted people</small></div></a>
-		</nav>
-
-		<div class="side-note"><span>☎</span><div><strong>Daily check-ins</strong><small>Care that stays close.</small></div></div>
-	</aside>
-
-	<header class="topbar">
-
-		<div class="profile">
-			<div class="avatar">A</div>
-
-			<div>
-				<strong>Aalisha</strong>
-				<span>My calls</span>
-			</div>
-		</div>
-
-	</header>
-
-
 	<main class="content">
 
 		<!-- HERO -->
@@ -401,13 +370,13 @@
 
 		<div
 			class="modal-backdrop"
-			onclick={closeCall}
 		>
 
 			<div
 				class="modal"
-				onclick={(event) =>
-					event.stopPropagation()}
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="call-details-title"
 			>
 
 				<div class="modal-header">
@@ -417,8 +386,10 @@
 					</div>
 
 					<button
+						type="button"
 						class="close-button"
 						onclick={closeCall}
+						aria-label="Close call details"
 					>
 						×
 					</button>
@@ -430,7 +401,7 @@
 					VCARE CHECK-IN
 				</p>
 
-				<h2>
+				<h2 id="call-details-title">
 					{selectedCall.date},
 					{selectedCall.time}
 				</h2>
@@ -478,6 +449,7 @@
 
 
 				<button
+					type="button"
 					class="modal-done"
 					onclick={closeCall}
 				>

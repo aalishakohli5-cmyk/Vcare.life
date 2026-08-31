@@ -1,5 +1,5 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
 	let reminders = $state([]);
@@ -9,6 +9,8 @@
 	let title = $state('');
 	let reminderTime = $state('');
 	let note = $state('');
+	let formError = $state('');
+	let saving = $state(false);
 
 	let completedCount = $derived(reminders.filter((reminder) => reminder.completed).length);
 	let progress = $derived(reminders.length ? Math.round((completedCount / reminders.length) * 100) : 0);
@@ -39,8 +41,21 @@
 		);
 	}
 
-	function addReminder() {
-		if (!title.trim() || !reminderTime) return;
+	async function addReminder() {
+		formError = '';
+
+		if (!title.trim()) {
+			formError = 'Please enter what you would like to remember.';
+			return;
+		}
+
+		if (!reminderTime) {
+			formError = 'Please choose a reminder time.';
+			return;
+		}
+
+		saving = true;
+		await tick();
 
 		const reminder = {
 			id: Date.now(),
@@ -58,6 +73,7 @@
 		reminderTime = '';
 		note = '';
 		showAddForm = false;
+		saving = false;
 	}
 
 	function toggleReminder(id) {
@@ -110,34 +126,6 @@
 </svelte:head>
 
 <div class="page">
-	<aside class="senior-sidebar">
-		<a class="side-brand" href="/senior/dashboard">
-			<span class="side-logo">♥</span>
-			<span><strong>Vcare.life</strong><small>A Voice That Cares</small></span>
-		</a>
-
-		<nav class="side-nav" aria-label="Senior navigation">
-			<a href="/senior/dashboard"><span>⌂</span><div><strong>Home</strong><small>Your day at a glance</small></div></a>
-			<a href="/senior/medications"><span>✚</span><div><strong>Medicines</strong><small>Your medication plan</small></div></a>
-			<a href="/senior/reminder" class="active"><span>◷</span><div><strong>Reminders</strong><small>Your routine & plans</small></div></a>
-			<a href="/senior/Vcare"><span>☎</span><div><strong>Vcare Calls</strong><small>Calls & summaries</small></div></a>
-			<a href="/senior/care-circle"><span>♡</span><div><strong>Care Circle</strong><small>Your trusted people</small></div></a>
-		</nav>
-
-		<div class="side-note"><span>♡</span><div><strong>A calmer day</strong><small>Keep only what matters.</small></div></div>
-	</aside>
-
-	<header class="topbar">
-		<div class="profile">
-			<div class="avatar">A</div>
-
-			<div class="profile-copy">
-				<strong>Aalisha</strong>
-				<span>My reminders</span>
-			</div>
-		</div>
-	</header>
-
 	<main class="content">
 
 		<!-- HERO -->
@@ -281,7 +269,7 @@
 			<!-- ADD FORM -->
 
 			{#if showAddForm}
-				<div class="add-panel">
+				<form class="add-panel" onsubmit={(event) => { event.preventDefault(); addReminder(); }} novalidate>
 
 					<div class="form-heading">
 						<div class="form-symbol">＋</div>
@@ -298,29 +286,37 @@
 
 					<div class="form-grid">
 
-						<label>
+						<label for="reminder-title">
 							<span>Reminder</span>
 
 							<input
+								id="reminder-title"
+								name="title"
 								type="text"
 								placeholder="e.g. Doctor appointment"
 								bind:value={title}
+								required
 							/>
 						</label>
 
-						<label>
+						<label for="reminder-time">
 							<span>Time</span>
 
 							<input
+								id="reminder-time"
+								name="time"
 								type="time"
 								bind:value={reminderTime}
+								required
 							/>
 						</label>
 
-						<label>
+						<label for="reminder-note">
 							<span>Small note</span>
 
 							<input
+								id="reminder-note"
+								name="note"
 								type="text"
 								placeholder="Optional note"
 								bind:value={note}
@@ -329,9 +325,14 @@
 
 					</div>
 
+					{#if formError}
+						<p class="form-error" role="alert">{formError}</p>
+					{/if}
+
 					<div class="form-actions">
 
 						<button
+							type="button"
 							class="cancel-button"
 							onclick={() =>
 								(showAddForm = false)}
@@ -340,14 +341,15 @@
 						</button>
 
 						<button
+							type="submit"
 							class="save-button"
-							onclick={addReminder}
+							disabled={saving}
 						>
-							Save reminder →
+							{saving ? 'Saving…' : 'Save reminder →'}
 						</button>
 
 					</div>
-				</div>
+				</form>
 			{/if}
 
 			<!-- EMPTY STATE -->
@@ -1082,6 +1084,17 @@
 		display: flex;
 		justify-content: flex-end;
 		gap: 8px;
+	}
+
+	.form-error {
+		margin: 14px 0 0;
+		padding: 11px 13px;
+		border: 1px solid #efc6bd;
+		border-radius: 12px;
+		background: #fff1ed;
+		color: #9b2f24;
+		font-size: 13px;
+		font-weight: 700;
 	}
 
 	.cancel-button,

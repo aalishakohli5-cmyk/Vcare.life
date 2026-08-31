@@ -1,4 +1,5 @@
 <script>
+	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
 	let caregivers = $state([
@@ -24,13 +25,33 @@
 	let name = $state('');
 	let relation = $state('');
 	let phone = $state('');
+	let formError = $state('');
+	let saving = $state(false);
 
 	function goBack() {
 		goto('/senior/dashboard');
 	}
 
-	function addCaregiver() {
-		if (!name.trim() || !relation.trim()) return;
+	async function addCaregiver() {
+		formError = '';
+
+		if (!name.trim()) {
+			formError = 'Please enter the person’s name.';
+			return;
+		}
+
+		if (!relation.trim()) {
+			formError = 'Please enter their relationship to you.';
+			return;
+		}
+
+		if (phone.trim() && !/^\+?[0-9\s()-]{7,20}$/.test(phone.trim())) {
+			formError = 'Please enter a valid phone number.';
+			return;
+		}
+
+		saving = true;
+		await tick();
 
 		caregivers = [
 			...caregivers,
@@ -48,6 +69,7 @@
 		relation = '';
 		phone = '';
 		showAddForm = false;
+		saving = false;
 	}
 
 	function removeCaregiver(id) {
@@ -69,37 +91,6 @@
 </svelte:head>
 
 <div class="page">
-	<aside class="senior-sidebar">
-		<a class="side-brand" href="/senior/dashboard">
-			<span class="side-logo">♥</span>
-			<span><strong>Vcare.life</strong><small>A Voice That Cares</small></span>
-		</a>
-
-		<nav class="side-nav" aria-label="Senior navigation">
-			<a href="/senior/dashboard"><span>⌂</span><div><strong>Home</strong><small>Your day at a glance</small></div></a>
-			<a href="/senior/medications"><span>✚</span><div><strong>Medicines</strong><small>Your medication plan</small></div></a>
-			<a href="/senior/reminder"><span>◷</span><div><strong>Reminders</strong><small>Your routine & plans</small></div></a>
-			<a href="/senior/Vcare"><span>☎</span><div><strong>Vcare Calls</strong><small>Calls & summaries</small></div></a>
-			<a href="/senior/care-circle" class="active"><span>♡</span><div><strong>Care Circle</strong><small>Your trusted people</small></div></a>
-		</nav>
-
-		<div class="side-note"><span>♡</span><div><strong>Your trusted people</strong><small>Support, one tap away.</small></div></div>
-	</aside>
-
-	<header class="topbar">
-
-		<div class="profile">
-			<div class="avatar">A</div>
-
-			<div>
-				<strong>Aalisha</strong>
-				<span>My care circle</span>
-			</div>
-		</div>
-
-	</header>
-
-
 	<main class="content">
 
 		<!-- HERO -->
@@ -201,7 +192,7 @@
 
 			{#if showAddForm}
 
-				<div class="add-panel">
+				<form class="add-panel" onsubmit={(event) => { event.preventDefault(); addCaregiver(); }} novalidate>
 
 					<div class="form-heading">
 
@@ -224,44 +215,59 @@
 
 					<div class="form-grid">
 
-						<label>
+						<label for="care-name">
 							<span>Name</span>
 
 							<input
+								id="care-name"
+								name="name"
 								type="text"
 								placeholder="e.g. Monica"
 								bind:value={name}
+								autocomplete="name"
+								required
 							/>
 						</label>
 
 
-						<label>
+						<label for="care-relation">
 							<span>Relationship</span>
 
 							<input
+								id="care-relation"
+								name="relationship"
 								type="text"
 								placeholder="e.g. Daughter"
 								bind:value={relation}
+								required
 							/>
 						</label>
 
 
-						<label>
+						<label for="care-phone">
 							<span>Phone</span>
 
 							<input
-								type="text"
+								id="care-phone"
+								name="phone"
+								type="tel"
 								placeholder="+91..."
 								bind:value={phone}
+								autocomplete="tel"
 							/>
 						</label>
 
 					</div>
 
+					{#if formError}
+						<p class="form-error" role="alert">{formError}</p>
+					{/if}
+
 
 					<div class="form-actions">
 
 						<button
+							type="button"
 							class="cancel-button"
 							onclick={() =>
 								(showAddForm = false)}
@@ -270,15 +276,16 @@
 						</button>
 
 						<button
+							type="submit"
 							class="save-button"
-							onclick={addCaregiver}
+							disabled={saving}
 						>
-							Add to Care Circle →
+							{saving ? 'Adding…' : 'Add to Care Circle →'}
 						</button>
 
 					</div>
 
-				</div>
+				</form>
 
 			{/if}
 
@@ -1131,6 +1138,17 @@
 			flex-end;
 
 		gap: 8px;
+	}
+
+	.form-error {
+		margin: 14px 0 0;
+		padding: 11px 13px;
+		border: 1px solid #efc6bd;
+		border-radius: 12px;
+		background: #fff1ed;
+		color: #9b2f24;
+		font-size: 13px;
+		font-weight: 700;
 	}
 
 

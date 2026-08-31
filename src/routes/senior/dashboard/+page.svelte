@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
+	import { startSampleCall } from '$lib/senior/sampleCall';
 
 	let senior = $state({
 		firstName: 'User',
@@ -11,19 +12,13 @@
 		email: ''
 	});
 
-	let currentDate = $state('');
-	let currentTime = $state('');
-	let timezone = $state('');
-	let profileOpen = $state(false);
-	let helpOpen = $state(false);
-	let mood = $state('good');
-
 	let medicines = $state([]);
 	let recentCalls = $state([]);
 	let loadingMedicines = $state(true);
 	let loadingCalls = $state(true);
 	let medicinesError = $state('');
 	let callsError = $state('');
+	let mood = $state('good');
 
 	let reminders = $state([
 		{
@@ -61,8 +56,6 @@
 	let pendingMedicine = $state(null);
 
 	onMount(async () => {
-		timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
 		const {
 			data: { session }
 		} = await supabase.auth.getSession();
@@ -244,34 +237,10 @@
 			loadingCalls = false;
 		}
 
-		// Start live date/time
-		updateClock();
-		const clock = setInterval(updateClock, 1000);
-
 		return () => {
-			clearInterval(clock);
 			medicationSubscription.unsubscribe();
 		};
 	});
-
-	function updateClock() {
-		const now = new Date();
-
-		currentDate = new Intl.DateTimeFormat('en-IN', {
-			weekday: 'long',
-			day: 'numeric',
-			month: 'long',
-			year: 'numeric',
-			timeZone: timezone
-		}).format(now);
-
-		currentTime = new Intl.DateTimeFormat('en-IN', {
-			hour: 'numeric',
-			minute: '2-digit',
-			hour12: true,
-			timeZone: timezone
-		}).format(now);
-	}
 
 	function setMood(value) {
 		mood = value;
@@ -325,55 +294,22 @@
 	}
 
 	async function takeSampleCall() {
-		if (!seniorPhone) {
-			sampleCallMessage = 'No phone number found for this account. Please update your profile.';
-			return;
-		}
-
 		isCalling = true;
 		sampleCallMessage = 'Starting your Vcare check-in call...';
 
 		try {
-			const response = await fetch('/api/bland-call', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					phoneNumber: seniorPhone,
-					seniorName: senior.firstName,
-					seniorId: userId,
-					medicationId: pendingMedicine?.id || null,
-					medicationName: pendingMedicine?.name || 'daily health check-in',
-					dosage: pendingMedicine?.dosage || 'prescribed dose'
-				})
+			await startSampleCall({
+				phone: seniorPhone || senior.phone,
+				firstName: senior.firstName,
+				userId,
+				pendingMedicine
 			});
-
-			const data = await response.json();
-
-			if (!response.ok) {
-				throw new Error(data.error || 'Could not start the call');
-			}
-
-			sampleCallMessage = 'Vcare is calling you now! 📞';
+			sampleCallMessage = 'Vcare is calling you now.';
 		} catch (error) {
-			console.error('Call error:', error);
 			sampleCallMessage = error.message || 'Could not start the call. Please try again.';
 		} finally {
 			isCalling = false;
 		}
-	}
-
-	function scrollToSection(id) {
-		const el = document.getElementById(id);
-		if (el) {
-			el.scrollIntoView({ behavior: 'smooth' });
-		}
-	}
-
-	async function logout() {
-		await supabase.auth.signOut();
-		goto('/');
 	}
 
 	// Computed alerts
@@ -400,219 +336,6 @@
 
 
 <div class="app">
-
-	<!-- =======================================================
-	     SIDEBAR
-	     ======================================================= -->
-
-	<aside class="sidebar">
-
-		<div class="brand">
-			<div class="logo">♥</div>
-
-			<div class="brand-copy">
-				<strong>Vcare.life</strong>
-				<span>A Voice That Cares</span>
-			</div>
-		</div>
-
-
-		<nav class="main-nav">
-
-			<a href="/senior/dashboard" class="nav-link active">
-				<span class="nav-icon">⌂</span>
-
-				<div>
-					<strong>Home</strong>
-					<small>Your day at a glance</small>
-				</div>
-			</a>
-
-
-			<a href="/senior/medications" class="nav-link">
-    <span class="nav-icon">✚</span>
-
-    <div>
-        <strong>Medicines</strong>
-        <small>Your medication plan</small>
-    </div>
-</a>
-
-
-
-			<a href="/senior/reminder" class="nav-link">
-				<span class="nav-icon">◷</span>
-
-				<div>
-					<strong>Reminders</strong>
-					<small>Your routine & plans</small>
-				</div>
-			</a>
-
-
-
-			<a href="/senior/Vcare" class="nav-link">
-				<span class="nav-icon">☎</span>
-
-				<div>
-					<strong>Vcare Calls</strong>
-					<small>Calls & summaries</small>
-				</div>
-			</a>
-
-
-			<a href="/senior/care-circle" class="nav-link">
-				<span class="nav-icon">♡</span>
-
-				<div>
-					<strong>Care Circle</strong>
-					<small>Your trusted people</small>
-				</div>
-			</a>
-
-		</nav>
-
-
-		<!-- SAMPLE CALL -->
-
-		<div class="sample-card">
-
-			<div class="sample-phone">
-
-				<div class="sample-speaker"></div>
-
-				<div class="sample-screen">
-					<span>VCARE</span>
-					<strong>Try me!</strong>
-					<div>♥</div>
-				</div>
-
-			</div>
-
-
-			<div class="sample-copy">
-				<p>EXPERIENCE VCARE</p>
-
-				<h3>Take a sample call</h3>
-
-				<span>
-					See how Vcare checks in with you.
-				</span>
-			</div>
-
-
-			<button
-				class="sample-button"
-				onclick={takeSampleCall}
-				disabled={isCalling}
-			>
-				{isCalling ? '📞 Calling...' : '☎ Call me'}
-			</button>
-
-
-			{#if sampleCallMessage}
-				<p class="sample-message">
-					{sampleCallMessage}
-				</p>
-			{/if}
-
-		</div>
-
-
-		<div class="sidebar-footer">
-			<span>♡</span>
-			<p>
-				Small conversations.<br />
-				A little more care.
-			</p>
-		</div>
-
-	</aside>
-
-
-
-	<!-- =======================================================
-	     MAIN CONTENT
-	     ======================================================= -->
-
-	<div class="main-area">
-
-
-		<!-- ===================================================
-		     TOP BAR
-		     =================================================== -->
-
-		<header class="topbar">
-
-			<div class="mobile-logo">
-				<div class="logo small">♥</div>
-				<strong>Vcare.life</strong>
-			</div>
-
-
-			<div class="top-date">
-				<span>▣</span>
-
-				<div>
-					<small>TODAY</small>
-					<strong>{currentDate}</strong>
-                    <span class="live-time">{currentTime}</span>
-				</div>
-			</div>
-
-
-			<div class="top-actions">
-
-				<button class="help" onclick={() => helpOpen = !helpOpen}>
-					?
-					<span>Help</span>
-				</button>
-
-
-				<div class="profile-container">
-					<button class="profile" onclick={() => profileOpen = !profileOpen}>
-
-						<div class="avatar">
-							{senior.firstName.charAt(0).toUpperCase()}
-						</div>
-
-						<div class="profile-name">
-							<strong>{senior.firstName}</strong>
-							<span>My profile</span>
-						</div>
-
-						<span class="dropdown-arrow">⌄</span>
-
-					</button>
-
-					{#if profileOpen}
-						<div class="profile-menu">
-							<div class="profile-menu-header">
-								<strong>{senior.fullName || senior.firstName}</strong>
-								<small>{senior.phone || senior.email}</small>
-							</div>
-							<a href="/senior/medications" class="menu-item" onclick={() => profileOpen = false}>
-								<span>💊</span> My Medicines
-							</a>
-							<a href="/senior/reminder" class="menu-item" onclick={() => profileOpen = false}>
-								<span>◷</span> My Reminders
-							</a>
-							<a href="/senior/care-circle" class="menu-item" onclick={() => profileOpen = false}>
-								<span>♡</span> Care Circle
-							</a>
-							<button class="menu-item logout" onclick={logout}>
-								<span>↗</span> Sign Out
-							</button>
-						</div>
-					{/if}
-				</div>
-
-			</div>
-
-		</header>
-
-
-
 		<main class="content">
 
 
@@ -1486,53 +1209,6 @@
 		</main>
 
 	</div>
-
-	<!-- HELP MODAL -->
-	{#if helpOpen}
-		<div class="help-overlay" onclick={(e) => { if (e.target === e.currentTarget) helpOpen = false; }} role="dialog" aria-modal="true" tabindex="-1">
-			<div class="help-card">
-				<header class="help-header">
-					<div>
-						<p class="help-eyebrow">ABOUT VCARE</p>
-						<h2>How Vcare Cares for You</h2>
-					</div>
-					<button class="modal-close" onclick={() => helpOpen = false}>×</button>
-				</header>
-
-				<div class="help-body">
-					<div class="help-item">
-						<div class="help-icon">☎</div>
-						<div>
-							<strong>Daily AI Phone Calls</strong>
-							<p>Vcare calls your phone automatically to ask about your medicines, health, and daily mood.</p>
-						</div>
-					</div>
-
-					<div class="help-item">
-						<div class="help-icon">💊</div>
-						<div>
-							<strong>Medicine Reminders</strong>
-							<p>You and your caregiver can schedule prescriptions. When Vcare calls, you can simply confirm you took them.</p>
-						</div>
-					</div>
-
-					<div class="help-item">
-						<div class="help-icon">♡</div>
-						<div>
-							<strong>Care Circle & Emergency Alerts</strong>
-							<p>If you miss medications or feel unwell, Vcare automatically alerts your trusted family or caregiver.</p>
-						</div>
-					</div>
-				</div>
-
-				<footer class="help-footer">
-					<button class="btn-help-close" onclick={() => helpOpen = false}>Got it, thank you!</button>
-				</footer>
-			</div>
-		</div>
-	{/if}
-
-</div>
 
 
 
