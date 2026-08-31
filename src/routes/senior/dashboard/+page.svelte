@@ -440,14 +440,14 @@
 
 
 
-			<button class="nav-link" onclick={() => scrollToSection('routine-section')}>
+			<a href="/senior/reminder" class="nav-link">
 				<span class="nav-icon">◷</span>
 
 				<div>
 					<strong>Reminders</strong>
 					<small>Your routine & plans</small>
 				</div>
-			</button>
+			</a>
 
 
 
@@ -593,6 +593,9 @@
 							</div>
 							<a href="/senior/medications" class="menu-item" onclick={() => profileOpen = false}>
 								<span>💊</span> My Medicines
+							</a>
+							<a href="/senior/reminder" class="menu-item" onclick={() => profileOpen = false}>
+								<span>◷</span> My Reminders
 							</a>
 							<button class="menu-item" onclick={() => { profileOpen = false; scrollToSection('care-section'); }}>
 								<span>♡</span> Care Circle
@@ -994,7 +997,7 @@
 						</div>
 
 
-						<button class="outline-button" onclick={() => goto('/senior/medications')}>
+						<button class="outline-button" onclick={() => goto('/senior/reminder')}>
 							＋ Add reminder
 						</button>
 
@@ -1133,7 +1136,7 @@
 					</div>
 
 
-					<button class="wide-link" onclick={() => goto('/senior/medications')}>
+					<button class="wide-link" onclick={() => goto('/senior/reminder')}>
 						View & edit all reminders
 						<span>→</span>
 					</button>
@@ -3955,6 +3958,103 @@
     font-size: 12px;
     font-weight: 700;
     color: #0d7249;
+}
+
+/* 2026 senior experience refresh */
+:global(body) {
+	font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	background: #f2f5ef;
+}
+
+.app {
+	grid-template-columns: 272px minmax(0, 1fr);
+	background:
+		radial-gradient(circle at 84% 4%, rgba(202, 231, 96, .22), transparent 28%),
+		linear-gradient(180deg, #f8faf6 0%, #eff3ec 100%);
+}
+
+.sidebar {
+	padding: 26px 20px;
+	border-right: 0;
+	background:
+		linear-gradient(165deg, rgba(255,255,255,.05), transparent 42%),
+		#123f31;
+	box-shadow: 14px 0 40px rgba(21, 62, 48, .10);
+}
+
+.brand { padding: 0 7px 27px; }
+.brand .logo { background: #d6eb6c; color: #123f31; box-shadow: 0 9px 25px rgba(0,0,0,.16); }
+.brand-copy strong { color: #fff; font-size: 19px; }
+.brand-copy span { color: rgba(255,255,255,.58); }
+.main-nav { gap: 7px; }
+.nav-link { min-height: 58px; color: rgba(255,255,255,.78); border: 1px solid transparent; }
+.nav-link small { color: rgba(255,255,255,.46); }
+.nav-link:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.08); transform: translateX(3px); }
+.nav-link.active { background: #e4efc7; color: #153f31; box-shadow: 0 12px 26px rgba(0,0,0,.13); }
+.nav-link.active small { color: #647266; }
+.nav-icon { border-radius: 11px; background: rgba(255,255,255,.07); }
+.nav-link.active .nav-icon { background: rgba(18,63,49,.08); }
+
+.sample-card {
+	border-color: rgba(255,255,255,.12);
+	background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
+	box-shadow: none;
+}
+.sample-copy p, .sample-copy h3, .sample-copy span, .sample-message { color: rgba(255,255,255,.82); }
+.sample-copy p { color: #d6eb6c; }
+.sample-button { background: #d6eb6c; color: #123f31; }
+.sidebar-footer { color: rgba(255,255,255,.5); }
+
+.topbar {
+	height: 82px;
+	border-color: rgba(25,82,61,.09);
+	background: rgba(250,252,247,.86);
+	backdrop-filter: blur(18px);
+}
+.help { background: white; border-color: rgba(25,82,61,.12); box-shadow: 0 8px 24px rgba(27,65,50,.06); }
+.profile { padding: 5px 7px 5px 5px; border-radius: 16px; transition: background .2s ease; }
+.profile:hover { background: rgba(18,63,49,.06); }
+.avatar { background: #d6eb6c; box-shadow: 0 6px 16px rgba(92,122,43,.16); }
+
+.content { width: min(1280px, 92%); padding-top: 36px; }
+.welcome { align-items: center; }
+.welcome h1 { font-family: Georgia, "Times New Roman", serif; letter-spacing: -2.8px; }
+.welcome h1 span { font-family: Inter, ui-sans-serif, sans-serif; font-weight: 650; }
+.welcome-badge { border-color: rgba(25,82,61,.11); background: rgba(255,255,255,.74); box-shadow: 0 14px 44px rgba(27,65,50,.07); }
+
+.call-banner {
+	border: 1px solid rgba(255,255,255,.12);
+	background:
+		radial-gradient(circle at 87% 8%, rgba(213,235,108,.18), transparent 30%),
+		linear-gradient(135deg, #0f6647 0%, #118457 60%, #0e714c 100%);
+	box-shadow: 0 26px 60px rgba(13,91,61,.18);
+}
+
+.panel {
+	border-color: rgba(32,83,63,.11);
+	background: rgba(255,255,255,.78);
+	box-shadow: 0 18px 56px rgba(24,62,47,.07);
+	transition: transform .22s ease, box-shadow .22s ease;
+}
+.panel:hover { transform: translateY(-2px); box-shadow: 0 24px 65px rgba(24,62,47,.11); }
+.medicine-row, .timeline-row, .call-row { border-radius: 15px; transition: background .2s ease; }
+.medicine-row:hover, .timeline-row:hover, .call-row:hover { background: #f5f8f2; }
+.medicine-action, .outline-button, .wide-link, .add-button { transition: transform .18s ease, box-shadow .18s ease; }
+.medicine-action:hover, .outline-button:hover, .add-button:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(20,93,63,.13); }
+.moods button { border-color: rgba(31,83,62,.12); background: #fbfcf9; }
+.moods button.chosen { background: #edf4d8; box-shadow: inset 0 0 0 1px rgba(37,100,69,.16); }
+.closing-card { background: linear-gradient(135deg, #e6f0cf, #f8f5e9); border-color: rgba(32,83,63,.11); }
+
+@media (max-width: 1020px) {
+	.app { grid-template-columns: 224px minmax(0,1fr); }
+	.sidebar { padding-inline: 14px; }
+}
+
+@media (max-width: 820px) {
+	.app { display: block; }
+	.sidebar { display: none; }
+	.topbar { padding-inline: 20px; }
+	.content { width: min(94%, 720px); }
 }
 
 
