@@ -380,29 +380,6 @@
 			     =================================================== -->
 
 			<section class="call-banner">
-
-
-				<div class="call-phone">
-
-					<div class="phone-top"></div>
-
-					<div class="phone-display">
-						<small>VCARE CALLING</small>
-
-						<strong>Hello there!</strong>
-
-						<span>♡</span>
-					</div>
-
-					<div class="phone-controls">
-						<div class="answer">☎</div>
-						<div class="center-button">•</div>
-						<div class="decline">×</div>
-					</div>
-
-				</div>
-
-
 				<div class="call-info">
 
 					<p class="lime-label">
@@ -2048,7 +2025,7 @@
 		color: white;
 
 		display: grid;
-		grid-template-columns: 110px 1fr 280px;
+		grid-template-columns: minmax(0, 1fr) 280px;
 		align-items: center;
 		gap: 28px;
 
@@ -2084,109 +2061,6 @@
 		color: rgba(216, 231, 80, 0.19);
 
 		font-size: 52px;
-	}
-
-
-	.call-phone {
-		position: relative;
-		z-index: 2;
-
-		width: 95px;
-		height: 155px;
-
-		padding: 12px 9px;
-
-		border: 5px solid #688e32;
-		border-radius: 22px;
-
-		background: #a7ca3c;
-
-		transform: rotate(-4deg);
-	}
-
-
-	.phone-top {
-		width: 38px;
-		height: 6px;
-
-		margin: 0 auto 9px;
-
-		border-radius: 10px;
-
-		background: #587730;
-	}
-
-
-	.phone-display {
-		height: 78px;
-
-		border: 4px solid #35623a;
-		border-radius: 11px;
-
-		background: #ddeb50;
-		color: #17442d;
-
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-	}
-
-
-	.phone-display small {
-		font-size: 5px;
-		font-weight: bold;
-	}
-
-
-	.phone-display strong {
-		font-size: 10px;
-		margin-top: 3px;
-	}
-
-
-	.phone-display span {
-		font-size: 17px;
-	}
-
-
-	.phone-controls {
-		margin-top: 9px;
-
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 7px;
-	}
-
-
-	.phone-controls div {
-		width: 19px;
-		height: 19px;
-
-		border-radius: 50%;
-
-		display: grid;
-		place-items: center;
-
-		font-size: 7px;
-	}
-
-
-	.answer {
-		background: #198b58;
-	}
-
-
-	.center-button {
-		background: #f5efd8;
-
-		color: #52713b;
-	}
-
-
-	.decline {
-		background: #ea5e45;
 	}
 
 
@@ -3383,7 +3257,7 @@
 
 
 		.call-banner {
-			grid-template-columns: 90px 1fr;
+			grid-template-columns: 1fr;
 		}
 
 
@@ -3491,17 +3365,6 @@
 			grid-template-columns: 1fr;
 
 			border-radius: 22px;
-		}
-
-
-		.call-phone {
-			width: 75px;
-			height: 120px;
-		}
-
-
-		.phone-display {
-			height: 57px;
 		}
 
 
