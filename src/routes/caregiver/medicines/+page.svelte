@@ -673,18 +673,18 @@
 
 <!-- ADD MEDICINE MODAL -->
 {#if showAddModal}
-	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showAddModal = false; }} role="dialog" aria-modal="true" tabindex="-1">
-		<div class="modal-card">
+	<div class="modal-overlay">
+		<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="add-medicine-title">
 			<header class="modal-header">
 				<div>
 					<p class="eyebrow">NEW PRESCRIPTION</p>
-					<h2>Add Medicine for {senior.firstName}</h2>
+					<h2 id="add-medicine-title">Add Medicine for {senior.firstName}</h2>
 				</div>
-				<button class="modal-close" onclick={() => showAddModal = false}>×</button>
+				<button type="button" class="modal-close" onclick={() => showAddModal = false} aria-label="Close add medicine form">×</button>
 			</header>
 
 			{#if addError}
-				<div class="modal-error">{addError}</div>
+				<div class="modal-error" role="alert">{addError}</div>
 			{/if}
 
 			<form onsubmit={(e) => { e.preventDefault(); addMedication(); }}>

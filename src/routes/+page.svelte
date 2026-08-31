@@ -15,6 +15,10 @@
       src="/grandma.jpg"
       alt="Senior woman happily talking on the phone"
       class="hero-image"
+      width="1536"
+      height="1024"
+      decoding="async"
+      fetchpriority="high"
     />
 
     <div class="hero-overlay"></div>
