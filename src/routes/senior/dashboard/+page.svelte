@@ -362,12 +362,12 @@
 				</div>
 
 
-				<div class="welcome-badge">
-					<span>♥</span>
+				<div class="welcome-badge" role="status" aria-label="Vcare status: You are all set">
+					<span class="status-mark" aria-hidden="true">✓</span>
 
 					<div>
-						<small>YOUR VCARE</small>
-						<strong>Everything looks good</strong>
+						<small>Vcare status</small>
+						<strong>You’re all set</strong>
 					</div>
 				</div>
 
@@ -1966,30 +1966,34 @@
 
 
 	.welcome-badge {
-		padding: 12px 15px;
+		padding: 11px 16px 11px 11px;
 
-		border: 1px solid #dfd0b2;
-		border-radius: 16px;
+		border: 1px solid #d8e5c8;
+		border-radius: 999px;
 
-		background: #fffaf0;
+		background: rgba(255, 255, 255, 0.88);
 
 		display: flex;
 		align-items: center;
-		gap: 10px;
+		gap: 12px;
+		box-shadow: 0 10px 28px rgba(28, 72, 52, 0.07);
 	}
 
 
-	.welcome-badge > span {
-		width: 32px;
-		height: 32px;
+	.welcome-badge > .status-mark {
+		width: 38px;
+		height: 38px;
+		flex: 0 0 38px;
 
-		border-radius: 10px;
+		border-radius: 50%;
 
-		background: #eff3ca;
-		color: #5c873e;
+		background: #e2f0c5;
+		color: #39713d;
 
 		display: grid;
 		place-items: center;
+		font-size: 18px !important;
+		font-weight: 800;
 	}
 
 
@@ -2000,19 +2004,21 @@
 
 
 	.welcome-badge small {
-		font-size: 6px;
-		letter-spacing: 1px;
+		font-size: 13px !important;
+		line-height: 1.15 !important;
+		letter-spacing: 0.2px;
 
-		color: #8a7d68;
+		color: #728075;
 	}
 
 
 	.welcome-badge strong {
-		margin-top: 3px;
+		margin-top: 2px;
 
-		font-size: 9px;
+		font-size: 16px !important;
+		line-height: 1.2 !important;
 
-		color: #40583f;
+		color: #254c38;
 	}
 
 

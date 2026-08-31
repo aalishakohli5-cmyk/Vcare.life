@@ -158,99 +158,78 @@ body {
 }
 
 .senior-nav a.active {
-	background: #e4efc7;
-	color: #153f31;
-	box-shadow: 0 12px 26px rgba(0, 0, 0, 0.14);
+	border-color: #eaf79b;
+	background: linear-gradient(135deg, #ddf276 0%, #c8e84f 100%);
+	color: #163f2f;
+	box-shadow: 0 12px 28px rgba(132, 169, 47, 0.26);
 }
 
 .senior-nav a.active > span {
-	background: rgba(18, 63, 49, 0.08);
+	background: rgba(18, 63, 49, 0.12);
 }
 
 .senior-nav a.active small {
-	color: #647266;
+	color: #45613f;
 }
 
 .sample-card {
 	margin-top: auto;
-	padding: 16px;
+	padding: 18px;
 	border: 1px solid rgba(255, 255, 255, 0.12);
 	border-radius: 20px;
-	background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+	background: linear-gradient(145deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.055));
 }
 
-.sample-phone {
-	width: 42px;
-	height: 70px;
-	padding: 5px;
-	margin-bottom: 12px;
-	border: 3px solid #487d42;
-	border-radius: 11px;
-	background: #93b53c;
-}
-
-.sample-speaker {
-	width: 14px;
-	height: 3px;
-	margin: auto;
-	border-radius: 6px;
-	background: #4d713a;
-}
-
-.sample-screen {
-	height: 46px;
-	margin-top: 4px;
-	border: 2px solid #33643d;
-	border-radius: 6px;
-	background: #d8e94c;
-	color: #22523a;
+.sample-card-header {
 	display: flex;
-	flex-direction: column;
 	align-items: center;
-	justify-content: center;
+	gap: 12px;
 }
 
-.sample-screen span {
-	font-size: 9px;
-	font-weight: 800;
-}
-
-.sample-screen strong {
-	font-size: 11px;
+.sample-call-icon {
+	width: 48px;
+	height: 48px;
+	flex: 0 0 48px;
+	border-radius: 15px;
+	background: #d6eb6c;
+	color: #153f32;
+	display: grid;
+	place-items: center;
+	font-size: 23px;
+	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
 }
 
 .sample-copy p {
-	margin: 0 0 5px;
+	margin: 0 0 3px;
 	color: #d6eb6c;
-	font-size: 14px;
+	font-size: 12px;
 	font-weight: 800;
-	letter-spacing: 1px;
+	letter-spacing: 1.2px;
 }
 
 .sample-copy h3 {
 	margin: 0;
 	color: #fff;
-	font-size: 20px;
+	font-size: 19px;
 }
 
-.sample-copy span {
-	display: block;
-	margin-top: 5px;
+.sample-description {
+	margin: 13px 0 0;
 	color: rgba(255, 255, 255, 0.72);
-	font-size: 16px;
-	line-height: 1.4;
+	font-size: 15px;
+	line-height: 1.45;
 }
 
 .sample-button {
 	width: 100%;
-	margin-top: 12px;
+	margin-top: 14px;
 	padding: 12px;
 	border: none;
 	border-radius: 11px;
 	background: #d6eb6c;
 	color: #123f31;
 	font-weight: 800;
-	font-size: 18px;
+	font-size: 16px;
 	cursor: pointer;
 }
 

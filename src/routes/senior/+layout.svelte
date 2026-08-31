@@ -166,22 +166,17 @@
 		</nav>
 
 		<div class="sample-card">
-			<div class="sample-phone">
-				<div class="sample-speaker"></div>
-				<div class="sample-screen">
-					<span>VCARE</span>
-					<strong>Try me!</strong>
+			<div class="sample-card-header">
+				<div class="sample-call-icon" aria-hidden="true">☎</div>
+				<div class="sample-copy">
+					<p>TRY VCARE</p>
+					<h3>Sample call</h3>
 				</div>
 			</div>
-
-			<div class="sample-copy">
-				<p>EXPERIENCE VCARE</p>
-				<h3>Take a sample call</h3>
-				<span>See how Vcare checks in with you.</span>
-			</div>
+			<p class="sample-description">Hear how Vcare checks in and supports your day.</p>
 
 			<button type="button" class="sample-button" onclick={takeSampleCall} disabled={isCalling}>
-				{isCalling ? 'Calling...' : 'Call me'}
+				{isCalling ? 'Calling...' : 'Start sample call'}
 			</button>
 
 			{#if sampleCallMessage}
