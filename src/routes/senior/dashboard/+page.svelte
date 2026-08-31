@@ -451,24 +451,24 @@
 
 
 
-			<button class="nav-link" onclick={() => scrollToSection('calls-section')}>
+			<a href="/senior/Vcare" class="nav-link">
 				<span class="nav-icon">☎</span>
 
 				<div>
 					<strong>Vcare Calls</strong>
 					<small>Calls & summaries</small>
 				</div>
-			</button>
+			</a>
 
 
-			<button class="nav-link" onclick={() => scrollToSection('care-section')}>
+			<a href="/senior/care-circle" class="nav-link">
 				<span class="nav-icon">♡</span>
 
 				<div>
 					<strong>Care Circle</strong>
 					<small>Your trusted people</small>
 				</div>
-			</button>
+			</a>
 
 		</nav>
 
@@ -597,9 +597,9 @@
 							<a href="/senior/reminder" class="menu-item" onclick={() => profileOpen = false}>
 								<span>◷</span> My Reminders
 							</a>
-							<button class="menu-item" onclick={() => { profileOpen = false; scrollToSection('care-section'); }}>
+							<a href="/senior/care-circle" class="menu-item" onclick={() => profileOpen = false}>
 								<span>♡</span> Care Circle
-							</button>
+							</a>
 							<button class="menu-item logout" onclick={logout}>
 								<span>↗</span> Sign Out
 							</button>

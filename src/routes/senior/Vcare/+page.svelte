@@ -60,17 +60,24 @@
 </svelte:head>
 
 <div class="page">
+	<aside class="senior-sidebar">
+		<a class="side-brand" href="/senior/dashboard">
+			<span class="side-logo">♥</span>
+			<span><strong>Vcare.life</strong><small>A Voice That Cares</small></span>
+		</a>
+
+		<nav class="side-nav" aria-label="Senior navigation">
+			<a href="/senior/dashboard"><span>⌂</span><div><strong>Home</strong><small>Your day at a glance</small></div></a>
+			<a href="/senior/medications"><span>✚</span><div><strong>Medicines</strong><small>Your medication plan</small></div></a>
+			<a href="/senior/reminder"><span>◷</span><div><strong>Reminders</strong><small>Your routine & plans</small></div></a>
+			<a href="/senior/Vcare" class="active"><span>☎</span><div><strong>Vcare Calls</strong><small>Calls & summaries</small></div></a>
+			<a href="/senior/care-circle"><span>♡</span><div><strong>Care Circle</strong><small>Your trusted people</small></div></a>
+		</nav>
+
+		<div class="side-note"><span>☎</span><div><strong>Daily check-ins</strong><small>Care that stays close.</small></div></div>
+	</aside>
 
 	<header class="topbar">
-
-		<button class="brand" onclick={goBack}>
-			<div class="logo">♥</div>
-
-			<div class="brand-copy">
-				<strong>Vcare.life</strong>
-				<span>A Voice That Cares</span>
-			</div>
-		</button>
 
 		<div class="profile">
 			<div class="avatar">A</div>
@@ -1793,4 +1800,40 @@
 				column;
 		}
 	}
+
+	/* Unified senior navigation and modern page shell */
+	:global(body) { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f5ef; }
+	.page { display: grid; grid-template-columns: 250px minmax(0,1fr); grid-template-rows: auto 1fr; background: radial-gradient(circle at 86% 5%, rgba(203,230,99,.22), transparent 28%), linear-gradient(180deg,#f8faf5 0%,#f1f4ed 100%); }
+	.topbar { grid-column: 2; height: 82px; justify-content: flex-end; border-color: rgba(25,82,61,.1); background: rgba(250,252,247,.88); backdrop-filter: blur(18px); }
+	.content { grid-column: 2; width: min(1180px,92%); }
+	.hero h1 { font-family: Georgia, "Times New Roman", serif; letter-spacing: -2.5px; }
+	.hero h1 span { font-family: Inter, ui-sans-serif, sans-serif; font-weight: 650; }
+	.stats .stat-card, .history-card, .summary-card, .info-card { border-color: rgba(32,83,63,.11); background: rgba(255,255,255,.78); box-shadow: 0 18px 56px rgba(24,62,47,.07); }
+	.next-call { box-shadow: 0 24px 60px rgba(13,91,61,.17); }
+	.call-row { border-radius: 16px; transition: background .2s ease, transform .2s ease; }
+	.call-row:hover { background: #f5f8f2; transform: translateX(3px); }
+
+	.senior-sidebar { grid-row: 1 / 3; position: sticky; top: 0; height: 100vh; padding: 27px 18px 22px; background: linear-gradient(165deg,rgba(255,255,255,.055),transparent 42%),#123f31; box-shadow: 14px 0 40px rgba(21,62,48,.11); display: flex; flex-direction: column; z-index: 30; }
+	.side-brand { display: flex; align-items: center; gap: 11px; padding: 0 7px 28px; color: white; text-decoration: none; }
+	.side-brand > span:last-child { display: flex; flex-direction: column; }
+	.side-brand strong { font-size: 18px; line-height: 1; }
+	.side-brand small { margin-top: 5px; color: rgba(255,255,255,.55); font-size: 9px; }
+	.side-logo { width: 44px; height: 44px; border-radius: 14px; background: #d6eb6c; color: #123f31; display: grid; place-items: center; font-size: 21px; box-shadow: 0 9px 25px rgba(0,0,0,.16); }
+	.side-nav { display: flex; flex-direction: column; gap: 7px; }
+	.side-nav a { min-height: 58px; padding: 10px 12px; border: 1px solid transparent; border-radius: 15px; color: rgba(255,255,255,.78); display: flex; align-items: center; gap: 12px; text-decoration: none; transition: .2s ease; }
+	.side-nav a > span { width: 31px; height: 31px; border-radius: 11px; background: rgba(255,255,255,.07); display: grid; place-items: center; font-size: 17px; }
+	.side-nav a div { display: flex; flex-direction: column; }
+	.side-nav a strong { font-size: 12px; }
+	.side-nav a small { margin-top: 3px; color: rgba(255,255,255,.44); font-size: 8px; }
+	.side-nav a:hover { transform: translateX(3px); border-color: rgba(255,255,255,.08); background: rgba(255,255,255,.08); }
+	.side-nav a.active { background: #e4efc7; color: #153f31; box-shadow: 0 12px 26px rgba(0,0,0,.14); }
+	.side-nav a.active > span { background: rgba(18,63,49,.08); }
+	.side-nav a.active small { color: #647266; }
+	.side-note { margin-top: auto; padding: 15px; border: 1px solid rgba(255,255,255,.1); border-radius: 17px; background: rgba(255,255,255,.07); color: white; display: flex; align-items: center; gap: 10px; }
+	.side-note > span { width: 33px; height: 33px; border-radius: 11px; background: rgba(214,235,108,.15); color: #d6eb6c; display: grid; place-items: center; }
+	.side-note div { display: flex; flex-direction: column; }
+	.side-note strong { font-size: 10px; }
+	.side-note small { margin-top: 3px; color: rgba(255,255,255,.5); font-size: 8px; }
+
+	@media (max-width: 820px) { .page { display:block; } .senior-sidebar { display:none; } .topbar { padding-inline:20px; } }
 </style>

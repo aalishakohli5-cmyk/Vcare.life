@@ -120,7 +120,7 @@
 			<a href="/senior/dashboard"><span>⌂</span><div><strong>Home</strong><small>Your day at a glance</small></div></a>
 			<a href="/senior/medications"><span>✚</span><div><strong>Medicines</strong><small>Your medication plan</small></div></a>
 			<a href="/senior/reminder" class="active"><span>◷</span><div><strong>Reminders</strong><small>Your routine & plans</small></div></a>
-			<a href="/senior/dashboard#calls-section"><span>☎</span><div><strong>Vcare Calls</strong><small>Calls & summaries</small></div></a>
+			<a href="/senior/Vcare"><span>☎</span><div><strong>Vcare Calls</strong><small>Calls & summaries</small></div></a>
 			<a href="/senior/care-circle"><span>♡</span><div><strong>Care Circle</strong><small>Your trusted people</small></div></a>
 		</nav>
 

@@ -22,6 +22,11 @@
 
 	let userId = $state('');
 
+	let takenCount = $derived(medicines.filter((medicine) => medicine.taken).length);
+	let remainingCount = $derived(medicines.length - takenCount);
+	let adherence = $derived(medicines.length ? Math.round((takenCount / medicines.length) * 100) : 0);
+	let nextMedicine = $derived(medicines.find((medicine) => !medicine.taken) || null);
+
 	onMount(() => {
 		let channel;
 
@@ -365,16 +370,24 @@
 </svelte:head>
 
 <div class="page">
+	<aside class="senior-sidebar">
+		<a class="side-brand" href="/senior/dashboard">
+			<span class="side-logo">♥</span>
+			<span><strong>Vcare.life</strong><small>A Voice That Cares</small></span>
+		</a>
+
+		<nav class="side-nav" aria-label="Senior navigation">
+			<a href="/senior/dashboard"><span>⌂</span><div><strong>Home</strong><small>Your day at a glance</small></div></a>
+			<a href="/senior/medications" class="active"><span>✚</span><div><strong>Medicines</strong><small>Your medication plan</small></div></a>
+			<a href="/senior/reminder"><span>◷</span><div><strong>Reminders</strong><small>Your routine & plans</small></div></a>
+			<a href="/senior/Vcare"><span>☎</span><div><strong>Vcare Calls</strong><small>Calls & summaries</small></div></a>
+			<a href="/senior/care-circle"><span>♡</span><div><strong>Care Circle</strong><small>Your trusted people</small></div></a>
+		</nav>
+
+		<div class="side-note"><span>♡</span><div><strong>You’re doing well</strong><small>One step at a time.</small></div></div>
+	</aside>
+
 	<header class="topbar">
-		<button class="brand" onclick={goHome}>
-			<div class="logo">♥</div>
-
-			<div class="brand-copy">
-				<strong>Vcare.life</strong>
-				<span>A Voice That Cares</span>
-			</div>
-		</button>
-
 		<div class="profile">
 			<div class="avatar">
 				{senior.firstName.charAt(0).toUpperCase()}
@@ -410,6 +423,21 @@
 					medicines
 				</span>
 			</div>
+		</section>
+
+		<section class="insight-grid" aria-label="Medication overview">
+			<article>
+				<span class="insight-icon green">✓</span>
+				<div><small>TAKEN TODAY</small><strong>{takenCount}</strong><p>of {medicines.length} medicines</p></div>
+			</article>
+			<article>
+				<span class="insight-icon amber">◷</span>
+				<div><small>STILL TO TAKE</small><strong>{remainingCount}</strong><p>{remainingCount === 1 ? 'dose remaining' : 'doses remaining'}</p></div>
+			</article>
+			<article class="wide-insight">
+				<div class="adherence-top"><div><small>DAILY PROGRESS</small><strong>{adherence}% complete</strong></div><span>{nextMedicine ? `Next: ${nextMedicine.name}` : 'All done for today'}</span></div>
+				<div class="adherence-bar"><span style={`width: ${adherence}%`}></span></div>
+			</article>
 		</section>
 
 		{#if errorMessage}
@@ -1479,5 +1507,132 @@
 
 			justify-content: flex-end;
 		}
+	}
+
+	/* 2026 senior experience refresh */
+	:global(body) {
+		font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+		background: #f3f5ef;
+	}
+
+	.page {
+		display: grid;
+		grid-template-columns: 250px minmax(0, 1fr);
+		grid-template-rows: auto 1fr;
+		background:
+			radial-gradient(circle at 86% 5%, rgba(203, 230, 99, 0.24), transparent 28%),
+			linear-gradient(180deg, #f8faf5 0%, #f1f4ed 100%);
+	}
+
+	.topbar {
+		grid-column: 2;
+		justify-content: flex-end;
+		height: 82px;
+		border-color: rgba(25, 82, 61, 0.1);
+		background: rgba(250, 252, 247, 0.88);
+		backdrop-filter: blur(18px);
+		position: sticky;
+		top: 0;
+		z-index: 20;
+	}
+
+	.content { grid-column: 2; width: min(1180px, 92%); }
+
+	.senior-sidebar {
+		grid-row: 1 / 3;
+		position: sticky;
+		top: 0;
+		height: 100vh;
+		padding: 27px 18px 22px;
+		background: linear-gradient(165deg, rgba(255,255,255,.055), transparent 42%), #123f31;
+		box-shadow: 14px 0 40px rgba(21,62,48,.11);
+		display: flex;
+		flex-direction: column;
+		z-index: 30;
+	}
+
+	.side-brand { display: flex; align-items: center; gap: 11px; padding: 0 7px 28px; color: white; text-decoration: none; }
+	.side-brand > span:last-child { display: flex; flex-direction: column; }
+	.side-brand strong { font-size: 18px; line-height: 1; }
+	.side-brand small { margin-top: 5px; color: rgba(255,255,255,.55); font-size: 9px; }
+	.side-logo { width: 44px; height: 44px; border-radius: 14px; background: #d6eb6c; color: #123f31; display: grid; place-items: center; font-size: 21px; box-shadow: 0 9px 25px rgba(0,0,0,.16); }
+
+	.side-nav { display: flex; flex-direction: column; gap: 7px; }
+	.side-nav a { min-height: 58px; padding: 10px 12px; border: 1px solid transparent; border-radius: 15px; color: rgba(255,255,255,.78); display: flex; align-items: center; gap: 12px; text-decoration: none; transition: .2s ease; }
+	.side-nav a > span { width: 31px; height: 31px; border-radius: 11px; background: rgba(255,255,255,.07); display: grid; place-items: center; font-size: 17px; }
+	.side-nav a div { display: flex; flex-direction: column; }
+	.side-nav a strong { font-size: 12px; }
+	.side-nav a small { margin-top: 3px; color: rgba(255,255,255,.44); font-size: 8px; }
+	.side-nav a:hover { transform: translateX(3px); border-color: rgba(255,255,255,.08); background: rgba(255,255,255,.08); }
+	.side-nav a.active { background: #e4efc7; color: #153f31; box-shadow: 0 12px 26px rgba(0,0,0,.14); }
+	.side-nav a.active > span { background: rgba(18,63,49,.08); }
+	.side-nav a.active small { color: #647266; }
+
+	.side-note { margin-top: auto; padding: 15px; border: 1px solid rgba(255,255,255,.1); border-radius: 17px; background: rgba(255,255,255,.07); color: white; display: flex; align-items: center; gap: 10px; }
+	.side-note > span { width: 33px; height: 33px; border-radius: 11px; background: rgba(214,235,108,.15); color: #d6eb6c; display: grid; place-items: center; }
+	.side-note div { display: flex; flex-direction: column; }
+	.side-note strong { font-size: 10px; }
+	.side-note small { margin-top: 3px; color: rgba(255,255,255,.5); font-size: 8px; }
+	.hero h1 { font-family: Georgia, "Times New Roman", serif; letter-spacing: -2.5px; }
+	.hero h1 span { font-family: Inter, ui-sans-serif, sans-serif; font-weight: 650; }
+
+	.insight-grid {
+		display: grid;
+		grid-template-columns: 190px 190px minmax(280px, 1fr);
+		gap: 13px;
+		margin: -4px 0 25px;
+	}
+
+	.insight-grid article {
+		min-height: 94px;
+		padding: 16px;
+		border: 1px solid rgba(32, 83, 63, 0.11);
+		border-radius: 20px;
+		background: rgba(255, 255, 255, 0.76);
+		box-shadow: 0 14px 45px rgba(33, 66, 52, 0.06);
+		display: flex;
+		align-items: center;
+		gap: 13px;
+	}
+
+	.insight-icon { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; font-weight: 900; }
+	.insight-icon.green { background: #dceebd; color: #206443; }
+	.insight-icon.amber { background: #f7e9b7; color: #9a6b16; }
+	.insight-grid small { display: block; color: #718078; font-size: 8px; font-weight: 900; letter-spacing: 1.1px; }
+	.insight-grid strong { display: block; margin-top: 3px; color: #163f31; font-size: 21px; line-height: 1; }
+	.insight-grid p { margin: 4px 0 0; color: #7c877f; font-size: 9px; }
+
+	.insight-grid .wide-insight { display: block; padding: 19px 21px; }
+	.adherence-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
+	.adherence-top > span { color: #65736a; font-size: 10px; font-weight: 700; }
+	.adherence-bar { height: 9px; margin-top: 14px; overflow: hidden; border-radius: 999px; background: #e7ece5; }
+	.adherence-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #126b49, #b9d947); transition: width .25s ease; }
+
+	.medicine-card,
+	.hero-pill,
+	.info-card {
+		border-color: rgba(32, 83, 63, 0.12);
+		background: rgba(255, 255, 255, 0.76);
+		box-shadow: 0 18px 60px rgba(24, 62, 47, 0.07);
+	}
+
+	.medicine-row { border-radius: 16px; padding-inline: 12px; transition: background .2s ease, transform .2s ease; }
+	.medicine-row:hover { background: #f6f8f3; transform: translateX(3px); }
+	.add-button, .save-button, .empty-add { box-shadow: 0 8px 20px rgba(20, 100, 68, .14); }
+
+	@media (max-width: 900px) {
+		.insight-grid { grid-template-columns: 1fr 1fr; }
+		.insight-grid .wide-insight { grid-column: 1 / -1; }
+	}
+
+	@media (max-width: 820px) {
+		.page { display: block; }
+		.senior-sidebar { display: none; }
+		.topbar { padding-inline: 20px; }
+	}
+
+	@media (max-width: 560px) {
+		.insight-grid { grid-template-columns: 1fr; }
+		.insight-grid .wide-insight { grid-column: auto; }
 	}
 </style>
