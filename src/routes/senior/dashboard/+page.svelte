@@ -711,7 +711,7 @@
 						<!-- medicine items -->
 
 						{#each medicines as med}
-							<div class="timeline-row">
+							<div class="timeline-row" class:complete-row={med.status === 'taken'} class:upcoming-row={med.status !== 'taken'}>
 
 								<div class="timeline-time">
 									<strong>{med.time.split(' ')[0]}</strong>
@@ -740,7 +740,7 @@
 
 						{#each reminders as reminder}
 
-							<div class="timeline-row">
+							<div class="timeline-row" class:complete-row={reminder.status === 'done'} class:upcoming-row={reminder.status === 'upcoming'}>
 
 								<div class="timeline-time">
 
@@ -807,7 +807,7 @@
 
 						<!-- VCARE call -->
 
-						<div class="timeline-row">
+						<div class="timeline-row upcoming-row">
 
 							<div class="timeline-time">
 								<strong>6:00</strong>
@@ -1065,10 +1065,10 @@
 					</div>
 
 
-					<button class="wide-link" onclick={() => profileOpen = true}>
+					<a class="wide-link" href="/senior/care-circle" aria-label="View your profile and care circle">
 						View profile & care circle
-						<span>→</span>
-					</button>
+						<span aria-hidden="true">→</span>
+					</a>
 
 				</article>
 
@@ -2620,12 +2620,26 @@
 
 
 	.timeline-row {
-		min-height: 67px;
+		min-height: 82px;
+		margin: 7px 0;
+		padding: 10px 14px;
+		border: 1px solid transparent;
+		border-radius: 16px;
 
 		display: grid;
-		grid-template-columns: 55px 18px 39px 1fr auto;
+		grid-template-columns: 68px 20px 50px minmax(0, 1fr) auto;
 		align-items: center;
-		gap: 9px;
+		gap: 12px;
+	}
+
+	.timeline-row.complete-row {
+		border-color: #cfe4c2;
+		background: #f0f8e9;
+	}
+
+	.timeline-row.upcoming-row {
+		border-color: #eadb9a;
+		background: #fff8dc;
 	}
 
 
@@ -2638,12 +2652,14 @@
 
 
 	.timeline-time strong {
-		font-size: 11px;
+		font-size: 17px !important;
+		line-height: 1.2 !important;
 	}
 
 
 	.timeline-time span {
-		font-size: 7px;
+		font-size: 15px !important;
+		line-height: 1.25 !important;
 	}
 
 
@@ -2708,15 +2724,15 @@
 
 
 	.timeline-icon {
-		width: 36px;
-		height: 36px;
+		width: 46px;
+		height: 46px;
 
 		border-radius: 12px;
 
 		display: grid;
 		place-items: center;
 
-		font-size: 15px;
+		font-size: 20px;
 	}
 
 
@@ -2749,32 +2765,44 @@
 
 
 	.timeline-content strong {
-		font-size: 10px;
+		font-size: 18px !important;
+		line-height: 1.3 !important;
+		color: #173f31;
 	}
 
 
 	.timeline-content span {
 		margin-top: 4px;
 
-		color: #887b68;
+		color: #756955;
 
-		font-size: 7px;
+		font-size: 16px !important;
+		line-height: 1.35 !important;
 	}
 
 
 	.timeline-status {
-		font-size: 8px;
-		font-weight: bold;
+		min-width: 112px;
+		padding: 8px 12px;
+		border-radius: 999px;
+		font-size: 15px !important;
+		line-height: 1.2 !important;
+		font-weight: 800;
+		text-align: center;
 	}
 
 
 	.timeline-status.done {
-		color: #4f8548;
+		border: 1px solid #bcd9ae;
+		background: #dcefd1;
+		color: #285f34;
 	}
 
 
 	.timeline-status.upcoming {
-		color: #b48427;
+		border: 1px solid #e5cf78;
+		background: #ffedaa;
+		color: #765514;
 	}
 
 
@@ -2795,8 +2823,11 @@
 		font-weight: bold;
 
 		display: flex;
+		align-items: center;
 		justify-content: center;
 		gap: 8px;
+		text-decoration: none;
+		cursor: pointer;
 	}
 
 
@@ -3152,7 +3183,9 @@
 
 
 	.all-good strong {
-		font-size: 9px;
+		font-size: 18px !important;
+		line-height: 1.3 !important;
+		color: #244b36;
 	}
 
 
@@ -3439,7 +3472,9 @@
 		.timeline-status {
 			grid-column: 4;
 
-			margin-top: -8px;
+			min-width: 0;
+			margin-top: -4px;
+			justify-self: start;
 		}
 
 
