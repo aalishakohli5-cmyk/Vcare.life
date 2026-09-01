@@ -13,7 +13,7 @@ body {
 	background: #ffffff;
 	color: #153d32;
 	font-family: 'Avenir Next', 'Trebuchet MS', Verdana, sans-serif;
-	font-size: 20px;
+	font-size: 18px;
 	line-height: 1.55;
 }
 
@@ -24,29 +24,29 @@ body {
 }
 
 .senior-page :where(p, li, label, span, small, a, button, input, select, textarea) {
-	font-size: clamp(18px, 1.1vw, 21px) !important;
+	font-size: clamp(17px, 1vw, 19px) !important;
 	line-height: 1.55 !important;
 }
 
 .senior-page :where(input, select, textarea, button) {
-	min-height: 52px;
+	min-height: 48px;
 }
 
 .senior-page h1 {
-	font-size: clamp(48px, 4.2vw, 72px) !important;
+	font-size: clamp(44px, 3.8vw, 64px) !important;
 	line-height: 1.08 !important;
 	letter-spacing: -0.025em !important;
 	font-family: 'Arial Rounded MT Bold', 'Avenir Next Rounded', 'Avenir Next', sans-serif !important;
 }
 
 .senior-page h2 {
-	font-size: clamp(32px, 2.5vw, 44px) !important;
+	font-size: clamp(30px, 2.25vw, 40px) !important;
 	line-height: 1.18 !important;
 	font-family: 'Arial Rounded MT Bold', 'Avenir Next Rounded', 'Avenir Next', sans-serif !important;
 }
 
 .senior-page h3 {
-	font-size: clamp(24px, 1.7vw, 32px) !important;
+	font-size: clamp(22px, 1.5vw, 29px) !important;
 	line-height: 1.25 !important;
 	font-family: 'Arial Rounded MT Bold', 'Avenir Next Rounded', 'Avenir Next', sans-serif !important;
 }

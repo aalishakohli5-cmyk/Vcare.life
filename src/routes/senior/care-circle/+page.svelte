@@ -441,46 +441,6 @@
 
 			</div>
 
-
-			<div class="mini-card">
-
-				<div class="mini-icon">
-					♡
-				</div>
-
-				<div>
-					<strong>
-						People you choose
-					</strong>
-
-					<p>
-						Your Care Circle is made only of people
-						you trust.
-					</p>
-				</div>
-
-			</div>
-
-
-			<div class="mini-card">
-
-				<div class="mini-icon">
-					!
-				</div>
-
-				<div>
-					<strong>
-						Support when needed
-					</strong>
-
-					<p>
-						Vcare can surface important moments that
-						may need attention.
-					</p>
-				</div>
-
-			</div>
-
 		</section>
 
 
@@ -1454,9 +1414,8 @@
 		margin-top: 17px;
 
 		display: grid;
-
-		grid-template-columns:
-			repeat(3, 1fr);
+		grid-template-columns: minmax(0, 640px);
+		justify-content: center;
 
 		gap: 11px;
 	}

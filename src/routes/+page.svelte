@@ -705,7 +705,7 @@ h2 span {
 
   margin-bottom: 16px;
 
-  padding: 22px 24px;
+  padding: 22px 28px 22px 24px;
 
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -713,7 +713,14 @@ h2 span {
   align-items: center;
   gap: 18px;
 
+  border: 1px solid #dfe6e1;
+  border-left-width: 6px;
   border-radius: 22px;
+
+  background: rgba(255, 255, 255, 0.96);
+
+  box-shadow:
+    0 8px 24px rgba(35, 70, 55, 0.06);
 
   text-decoration: none;
   color: #173d32;
@@ -726,28 +733,12 @@ h2 span {
 
 
   .caregiver {
-    background:
-      linear-gradient(
-        120deg,
-        #e8f4e3,
-        #eff7ea
-      );
-
-    border:
-      1px solid #cfe2ca;
+    border-left-color: #58a878;
   }
 
 
   .senior {
-    background:
-      linear-gradient(
-        120deg,
-        #fff9ec,
-        #fff5df
-      );
-
-    border:
-      1px solid #ead9b7;
+    border-left-color: #dc9b38;
   }
 
 
@@ -762,12 +753,14 @@ h2 span {
 
 
   .caregiver:hover {
-    border-color: #9fc695;
+    border-color: #b9d8c3;
+    border-left-color: #32865a;
   }
 
 
   .senior:hover {
-    border-color: #d7bd83;
+    border-color: #ead5ae;
+    border-left-color: #bd7620;
   }
 
 
@@ -778,9 +771,9 @@ h2 span {
   display: grid;
   place-items: center;
 
-  border-radius: 16px;
+  border-radius: 0;
 
-  background: rgba(255, 255, 255, 0.82);
+  background: transparent;
 
   font-size: 25px;
 }
@@ -840,13 +833,24 @@ h2 span {
 
     border-radius: 50%;
 
-    background:
-      rgba(38, 106, 77, 0.07);
+    background: #ebf4ee;
 
     font-size: 20px;
 
     transition:
       transform 0.22s ease;
+  }
+
+
+  .senior .arrow {
+    background: #fbf1e2;
+    color: #9b651e;
+  }
+
+
+  .role-card:focus-visible {
+    outline: 3px solid #2d7a57;
+    outline-offset: 4px;
   }
 
 

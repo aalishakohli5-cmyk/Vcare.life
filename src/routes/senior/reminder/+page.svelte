@@ -1302,8 +1302,12 @@
 	}
 
 	.timeline-marker button {
-		width: 21px;
-		height: 21px;
+		width: 32px;
+		height: 32px;
+		min-width: 32px;
+		min-height: 32px !important;
+		padding: 0;
+		aspect-ratio: 1;
 
 		z-index: 2;
 
@@ -1318,7 +1322,7 @@
 		display: grid;
 		place-items: center;
 
-		font-size: 8px;
+		font-size: 16px !important;
 		font-weight: 900;
 	}
 
