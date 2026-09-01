@@ -956,10 +956,16 @@
 					</div>
 
 
-					<button class="wide-link" onclick={takeSampleCall}>
-						Take a sample call now
-						<span>→</span>
+					<button type="button" class="wide-link call-action" onclick={takeSampleCall} disabled={isCalling} aria-describedby="sample-call-feedback">
+						{isCalling ? 'Starting your sample call…' : 'Take a sample call now'}
+						<span aria-hidden="true">{isCalling ? '☎' : '→'}</span>
 					</button>
+
+					{#if sampleCallMessage}
+						<p id="sample-call-feedback" class="call-action-message" role="status" aria-live="polite">
+							{sampleCallMessage}
+						</p>
+					{/if}
 
 				</article>
 
@@ -2280,9 +2286,10 @@
 
 		margin-top: 6px;
 
-		color: #827562;
+		color: #465b50;
 
-		font-size: 9px;
+		font-size: 18px !important;
+		line-height: 1.45 !important;
 	}
 
 
@@ -2842,7 +2849,7 @@
 
 
 	.call-row {
-		padding: 15px 0;
+		padding: 18px 14px;
 
 		border-top: 1px solid #eadfc9;
 
@@ -2857,8 +2864,8 @@
 
 
 	.call-status-icon {
-		width: 39px;
-		height: 39px;
+		width: 48px;
+		height: 48px;
 
 		flex-shrink: 0;
 
@@ -2870,7 +2877,7 @@
 		display: grid;
 		place-items: center;
 
-		font-size: 13px;
+		font-size: 19px;
 	}
 
 
@@ -2901,28 +2908,32 @@
 
 
 	.call-row-top strong {
-		font-size: 10px;
+		font-size: 18px !important;
+		line-height: 1.3 !important;
+		color: #163e31;
 	}
 
 
 	.call-row-top > div > span {
 		margin-top: 3px;
 
-		color: #887b68;
+		color: #4f6257;
 
-		font-size: 7px;
+		font-size: 16px !important;
+		line-height: 1.35 !important;
 	}
 
 
 	.call-badge {
-		padding: 5px 8px;
+		padding: 7px 11px;
 
 		border-radius: 8px;
 
 		background: #e6efce;
 		color: #477243;
 
-		font-size: 7px;
+		font-size: 14px !important;
+		font-weight: 800;
 	}
 
 
@@ -2939,9 +2950,10 @@
 		align-items: center;
 		gap: 5px;
 
-		color: #796d5c;
+		color: #46594f;
 
-		font-size: 7px;
+		font-size: 16px !important;
+		line-height: 1.4 !important;
 	}
 
 
@@ -2953,9 +2965,57 @@
 	.call-row-content p {
 		margin: 6px 0 0;
 
-		color: #4f6755;
+		color: #293f35;
 
-		font-size: 8px;
+		font-size: 17px !important;
+		line-height: 1.5 !important;
+	}
+
+	.calls-panel .empty-inline-state {
+		margin-top: 16px;
+		padding: 24px;
+		border: 1px solid #d9e2cf;
+		border-radius: 16px;
+		background: #f5f8ef;
+	}
+
+	.calls-panel .empty-inline-state p {
+		margin: 0;
+		color: #293f35;
+		font-size: 18px !important;
+		line-height: 1.55 !important;
+	}
+
+	.calls-panel .call-action {
+		min-height: 56px;
+		padding: 14px 18px;
+		border: 1px solid #0f633f;
+		border-radius: 14px;
+		background: #176e48;
+		color: #fff;
+		font-size: 18px !important;
+		box-shadow: 0 10px 24px rgba(20, 93, 63, 0.18);
+	}
+
+	.calls-panel .call-action:hover:not(:disabled) {
+		background: #0f5c3c;
+	}
+
+	.calls-panel .call-action:disabled {
+		opacity: 0.7;
+		cursor: wait;
+	}
+
+	.call-action-message {
+		margin: 12px 0 0;
+		padding: 12px 14px;
+		border-radius: 12px;
+		background: #eaf3dd;
+		color: #244b36;
+		font-size: 17px !important;
+		font-weight: 700;
+		line-height: 1.45 !important;
+		text-align: center;
 	}
 
 
