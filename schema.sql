@@ -109,6 +109,10 @@ CREATE POLICY "Seniors can update own medications"
     ON public.medications FOR UPDATE 
     USING (auth.uid() = senior_id);
 
+CREATE POLICY "Seniors can delete own medications"
+    ON public.medications FOR DELETE
+    USING (auth.uid() = senior_id);
+
 CREATE POLICY "Caregivers can view linked senior medications" 
     ON public.medications FOR SELECT 
     USING (
@@ -135,6 +139,16 @@ CREATE POLICY "Caregivers can update medications for linked seniors"
         EXISTS (
             SELECT 1 FROM public.caregiver_links 
             WHERE caregiver_links.caregiver_id = auth.uid() 
+            AND caregiver_links.senior_id = medications.senior_id
+        )
+    );
+
+CREATE POLICY "Caregivers can delete medications for linked seniors"
+    ON public.medications FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.caregiver_links
+            WHERE caregiver_links.caregiver_id = auth.uid()
             AND caregiver_links.senior_id = medications.senior_id
         )
     );
