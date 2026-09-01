@@ -593,7 +593,7 @@
   position: relative;
   z-index: 3;
   width: 100%;
-  max-width: 650px;
+  max-width: 760px;
 }
 
 
@@ -605,7 +605,7 @@
 
     text-align: center;
 
-    font-size: 11px;
+    font-size: 13px;
 
     font-weight: 800;
 
@@ -623,7 +623,7 @@ h2 {
     "Times New Roman",
     serif;
 
-  font-size: clamp(52px, 4.5vw, 72px);
+  font-size: clamp(60px, 5.2vw, 88px);
   line-height: 0.98;
   font-weight: 500;
   letter-spacing: -0.045em;
@@ -648,14 +648,14 @@ h2 span {
 
 
   .intro {
-    max-width: 500px;
+	max-width: 620px;
 
     margin:
       23px auto 0;
 
     text-align: center;
 
-    font-size: 14px;
+	font-size: 17px;
 
     line-height: 1.65;
 
@@ -675,7 +675,7 @@ h2 span {
 
     text-align: center;
 
-    font-size: 17px;
+    font-size: 21px;
 
     font-weight: 750;
 
@@ -691,7 +691,7 @@ h2 span {
 
     text-align: center;
 
-    font-size: 11px;
+    font-size: 14px;
 
     color: #7b8882;
   }
@@ -796,7 +796,7 @@ h2 span {
   .role-main {
     margin-bottom: 3px;
 
-    font-size: 10px;
+    font-size: 13px;
 
     font-weight: 650;
 
@@ -805,7 +805,7 @@ h2 span {
 
 
   .role-copy strong {
-    font-size: 15px;
+    font-size: 19px;
   }
 
 
@@ -815,7 +815,7 @@ h2 span {
       0
       0;
 
-    font-size: 11px;
+    font-size: 14px;
 
     line-height: 1.4;
 
@@ -1086,12 +1086,12 @@ h2 span {
 
 
     h2 {
-      font-size: 41px;
+      font-size: 48px;
     }
 
 
     .intro {
-      font-size: 13px;
+      font-size: 15px;
     }
 
 
@@ -1115,12 +1115,12 @@ h2 span {
 
 
     .role-copy strong {
-      font-size: 13px;
+      font-size: 16px;
     }
 
 
     .role-copy p {
-      font-size: 10px;
+      font-size: 13px;
     }
 
   }

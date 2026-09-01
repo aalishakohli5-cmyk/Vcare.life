@@ -184,23 +184,6 @@
 				<button
 					onclick={() =>
 						openPreset(
-							'Take medicine',
-							'Daily medication'
-						)}
-				>
-					<div class="quick-icon medicine-icon">💊</div>
-
-					<div>
-						<strong>Medicine</strong>
-						<span>Medication reminder</span>
-					</div>
-
-					<b>＋</b>
-				</button>
-
-				<button
-					onclick={() =>
-						openPreset(
 							'Drink water',
 							'Stay hydrated'
 						)}
@@ -810,7 +793,7 @@
 		display: grid;
 
 		grid-template-columns:
-			repeat(3, 1fr);
+			repeat(2, minmax(0, 1fr));
 
 		gap: 11px;
 	}
@@ -866,10 +849,6 @@
 		place-items: center;
 
 		font-size: 19px;
-	}
-
-	.medicine-icon {
-		background: #eef2c8;
 	}
 
 	.water-icon {
