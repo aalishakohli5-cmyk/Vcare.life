@@ -53,6 +53,11 @@ def update_med(
     user=Depends(get_current_user)
 ):
     """Update medication details or mark taken/pending"""
+    medication = crud.get_medication(medication_id)
+    if not medication:
+        raise HTTPException(status_code=404, detail="Medication not found")
+    verify_caregiver_access(user.id, medication["senior_id"])
+
     data = med.model_dump(exclude_unset=True)
     if not data:
         raise HTTPException(status_code=400, detail="No fields provided to update")
@@ -68,6 +73,11 @@ def delete_med(
     user=Depends(get_current_user)
 ):
     """Delete a medication"""
+    medication = crud.get_medication(medication_id)
+    if not medication:
+        raise HTTPException(status_code=404, detail="Medication not found")
+    verify_caregiver_access(user.id, medication["senior_id"])
+
     success = crud.delete_medication(medication_id)
     if not success:
         raise HTTPException(status_code=400, detail="Failed to delete medication")

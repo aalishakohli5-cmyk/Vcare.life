@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from app.routes import (
+    accounts,
     calls, 
     webhooks, 
     medications, 
@@ -31,6 +32,7 @@ app.add_middleware(
 )
 
 # Register routers
+app.include_router(accounts.router, prefix="/account")
 app.include_router(calls.router, prefix="/calls")
 app.include_router(webhooks.router, prefix="/webhooks")
 app.include_router(medications.router, prefix="/medications")
@@ -49,4 +51,3 @@ def shutdown():
 def health_check():
     """Health check endpoint for monitoring"""
     return {"status": "healthy", "service": "Vcare.life"}
-

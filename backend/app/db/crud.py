@@ -54,6 +54,15 @@ def get_medications_senior(senior_id: str) -> Optional[List[Dict[str, Any]]]:
         logger.error(f"Error fetching medications for senior {senior_id}: {str(e)}")
         return None
 
+def get_medication(medication_id: int) -> Optional[Dict[str, Any]]:
+    """Fetch one medication so routes can verify ownership before changing it."""
+    try:
+        response = supabase.table("medications").select("*").eq("id", medication_id).execute()
+        return response.data[0] if response.data else None
+    except Exception as e:
+        logger.error(f"Error fetching medication {medication_id}: {str(e)}")
+        return None
+
 def update_medication(medication_id: int, data: dict) -> Optional[Dict[str, Any]]:
     """Update medication record (e.g. taken status, name, dosage, time)"""
     try:
@@ -69,7 +78,7 @@ def delete_medication(medication_id: int) -> bool:
     """Delete a medication record"""
     try:
         response = supabase.table("medications").delete().eq("id", medication_id).execute()
-        return True
+        return bool(response.data)
     except Exception as e:
         logger.error(f"Error deleting medication {medication_id}: {str(e)}")
         return False

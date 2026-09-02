@@ -423,6 +423,11 @@
 
 			</a>
 
+			<a href="/caregiver/settings" class="nav-item">
+				<span class="nav-icon">⚙</span>
+				<span>Settings</span>
+			</a>
+
 		</nav>
 
 
