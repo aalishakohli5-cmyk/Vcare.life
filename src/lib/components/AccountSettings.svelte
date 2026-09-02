@@ -8,12 +8,15 @@
 
 	let loading = $state(true);
 	let deleting = $state(false);
+	let switchingRole = $state(false);
 	let confirmingDelete = $state(false);
+	let userId = $state('');
 	let email = $state('');
 	let fullName = $state('');
 	let actualRole = $state('');
 	let provider = $state('Email');
 	let errorMessage = $state('');
+	let roleMessage = $state('');
 
 	const roleDetails = $derived(
 		actualRole === 'caregiver'
@@ -26,6 +29,8 @@
 				description: 'Receiving care, reminders, and daily support.'
 			}
 	);
+	const nextRole = $derived(actualRole === 'caregiver' ? 'senior' : 'caregiver');
+	const nextRoleLabel = $derived(nextRole === 'caregiver' ? 'Caregiver' : 'Senior');
 
 	onMount(async () => {
 		const {
@@ -38,6 +43,7 @@
 			return;
 		}
 
+		userId = user.id;
 		email = user.email || 'No email address available';
 		provider = user.app_metadata?.provider === 'google' ? 'Google' : 'Email';
 
@@ -59,6 +65,32 @@
 	async function signOut() {
 		await supabase.auth.signOut();
 		goto('/');
+	}
+
+	async function switchRole() {
+		switchingRole = true;
+		roleMessage = '';
+
+		try {
+			const { data, error } = await supabase
+				.from('profiles')
+				.update({ role: nextRole })
+				.eq('id', userId)
+				.select('role')
+				.maybeSingle();
+
+			if (error || !data?.role) {
+				throw new Error(error?.message || 'Your role could not be changed. Please try again.');
+			}
+
+			actualRole = data.role;
+			await goto(data.role === 'caregiver' ? '/caregiver/dashboard' : '/senior/dashboard');
+		} catch (error) {
+			roleMessage = error instanceof Error
+				? error.message
+				: 'Your role could not be changed. Please try again.';
+			switchingRole = false;
+		}
 	}
 
 	async function deleteAccount() {
@@ -155,8 +187,16 @@
 					<dt>Your role</dt>
 					<dd>{roleDetails.label}</dd>
 					<small>{roleDetails.description}</small>
+					<button type="button" class="switch-role-button" onclick={switchRole} disabled={switchingRole}>
+						{switchingRole ? 'Switching role…' : `Switch to ${nextRoleLabel}`}
+						<span aria-hidden="true">→</span>
+					</button>
 				</div>
 			</dl>
+
+			{#if roleMessage}
+				<p class="error-message account-error" role="alert">{roleMessage}</p>
+			{/if}
 
 			<button type="button" class="secondary-button" onclick={signOut}>Sign out</button>
 		</section>
@@ -278,6 +318,26 @@
 	dt { color: #596d64; font-size: 1rem; font-weight: 750; }
 	dd { margin: 0; color: #133f30; font-size: 1.18rem; font-weight: 850; overflow-wrap: anywhere; }
 	.details-list small { grid-column: 2; color: #677a72; font-size: 0.96rem; line-height: 1.45; }
+	.switch-role-button {
+		grid-column: 2;
+		justify-self: start;
+		display: inline-flex;
+		min-height: 48px;
+		align-items: center;
+		gap: 12px;
+		margin-top: 12px;
+		padding: 10px 18px;
+		border: 1.5px solid #75a05f;
+		border-radius: 13px;
+		background: #eaf6cc;
+		color: #174b37;
+		font-size: 1rem;
+		font-weight: 900;
+		cursor: pointer;
+	}
+	.switch-role-button:hover { background: #d7ee78; }
+	.switch-role-button span { font-size: 1.35rem; line-height: 1; }
+	.account-error { margin: -8px 0 24px; }
 
 	.secondary-button,
 	.delete-button {
@@ -318,6 +378,7 @@
 		.settings-page { width: min(100% - 24px, 920px); padding-top: 28px; }
 		.details-list > div { grid-template-columns: 1fr; }
 		.details-list small { grid-column: 1; }
+		.switch-role-button { grid-column: 1; width: 100%; justify-content: center; }
 		.secondary-button,
 		.delete-button { width: 100%; }
 	}
