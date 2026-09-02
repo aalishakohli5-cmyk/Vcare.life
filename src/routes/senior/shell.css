@@ -68,6 +68,7 @@ body {
 	box-shadow: 14px 0 40px rgba(21, 62, 48, 0.1);
 	display: flex;
 	flex-direction: column;
+	overflow-y: auto;
 	z-index: 30;
 }
 
@@ -251,6 +252,27 @@ body {
 	gap: 7px;
 	font-size: 15px;
 	line-height: 1.5;
+}
+
+.sidebar-settings {
+	display: flex;
+	min-height: 48px;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	margin-top: 14px;
+	border: 1px solid rgba(255, 255, 255, 0.18);
+	border-radius: 13px;
+	color: #dce9e3;
+	font-size: 16px;
+	font-weight: 800;
+	text-decoration: none;
+}
+
+.sidebar-settings:hover,
+.sidebar-settings[aria-current='page'] {
+	background: #d7ee59;
+	color: #153f31;
 }
 
 .senior-main {

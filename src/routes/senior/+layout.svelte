@@ -188,6 +188,11 @@
 			<span>♡</span>
 			<p>Small conversations.<br />A little more care.</p>
 		</div>
+
+		<a class="sidebar-settings" href="/senior/settings" aria-current={isActive('/senior/settings') ? 'page' : undefined}>
+			<span aria-hidden="true">⚙</span>
+			Settings
+		</a>
 	</aside>
 
 	<div class="senior-main">
@@ -241,6 +246,9 @@
 								onclick={() => (profileOpen = false)}
 							>
 								Care Circle
+							</a>
+							<a href="/senior/settings" class="menu-item" onclick={() => (profileOpen = false)}>
+								Settings
 							</a>
 							<button type="button" class="menu-item logout" onclick={logout}>Sign Out</button>
 						</div>

@@ -329,13 +329,17 @@
 			}
 
 			if (!deleted) {
-				const { error } = await supabase
+				const { data, error } = await supabase
 					.from('medications')
 					.delete()
 					.eq('id', medicineId)
-					.eq('senior_id', userId);
+					.eq('senior_id', userId)
+					.select('id');
 
 				if (error) throw error;
+				if (!data?.length) {
+					throw new Error('The medicine was not deleted. Database delete permission may be missing.');
+				}
 			}
 
 			await loadMedicines();
