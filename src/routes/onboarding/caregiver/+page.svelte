@@ -2,7 +2,11 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
-	import { PUBLIC_BACKEND_URL } from '$env/static/public';
+	import {
+		careInviteErrorMessage,
+		normalizeCareInviteCode,
+		rememberCareRecipient
+	} from '$lib/careConnections';
 
 	/* =====================================================
 	   CAREGIVER DATA
@@ -13,8 +17,7 @@
 	let caregiverPhone = $state('');
 	let relationship = $state('');
 
-	let seniorName = $state('');
-	let seniorPhone = $state('');
+	let inviteCode = $state('');
 
 	let step = $state(1);
 	let loading = $state(true);
@@ -76,34 +79,11 @@
 		)
 	);
 
+	/** @param {{ code: string }} item */
 	function selectCaregiverCountry(item) {
 		caregiverCountryCode = item.code;
 		caregiverCountrySearch = '';
 		caregiverCountryDropdownOpen = false;
-	}
-
-	/* =====================================================
-	   SENIOR COUNTRY PICKER
-	===================================================== */
-
-	let seniorCountryCode = $state('+91');
-	let seniorCountrySearch = $state('');
-	let seniorCountryDropdownOpen = $state(false);
-
-	let filteredSeniorCountries = $derived(
-		countryCodes.filter(
-			(item) =>
-				item.country
-					.toLowerCase()
-					.includes(seniorCountrySearch.toLowerCase()) ||
-				item.code.includes(seniorCountrySearch)
-		)
-	);
-
-	function selectSeniorCountry(item) {
-		seniorCountryCode = item.code;
-		seniorCountrySearch = '';
-		seniorCountryDropdownOpen = false;
 	}
 
 	/* =====================================================
@@ -134,6 +114,7 @@
 	   HELPERS
 	===================================================== */
 
+	/** @param {string} value */
 	function cleanPhone(value) {
 		return value.replace(/\D/g, '');
 	}
@@ -172,15 +153,9 @@
 	async function finishSetup() {
 		errorMessage = '';
 
-		if (!seniorName.trim()) {
-			errorMessage =
-				'Please enter the name of the senior you care for.';
-			return;
-		}
-
-		if (!seniorPhone.trim()) {
-			errorMessage =
-				'Please enter the senior\u2019s phone number.';
+		const normalizedCode = normalizeCareInviteCode(inviteCode);
+		if (!/^VCARE-[A-Z0-9]{6}$/.test(normalizedCode)) {
+			errorMessage = 'Enter the complete invitation code, for example VCARE-ABC123.';
 			return;
 		}
 
@@ -203,10 +178,7 @@
 		const fullCaregiverPhone =
 			`${caregiverCountryCode}${cleanPhone(caregiverPhone)}`;
 
-		const fullSeniorPhone =
-			`${seniorCountryCode}${cleanPhone(seniorPhone)}`;
-
-		// Step 1: Save caregiver profile to Supabase
+		// Save the caregiver account first; the code securely identifies the senior.
 		const { error } = await supabase
 			.from('profiles')
 			.upsert({
@@ -218,14 +190,6 @@
 				email: user.email,
 
 				phone: fullCaregiverPhone,
-
-				emergency_contact_name: seniorName.trim(),
-
-				emergency_contact_relationship:
-					relationship.trim(),
-
-				emergency_contact_phone:
-					fullSeniorPhone,
 
 				onboarding_complete: true,
 
@@ -243,61 +207,18 @@
 			return;
 		}
 
-		// Step 2: Create senior profile + link via backend (with Supabase fallback)
-		let onboardSuccess = false;
-		try {
-			const {
-				data: { session }
-			} = await supabase.auth.getSession();
+		const { data: connection, error: connectionError } = await supabase.rpc(
+			'redeem_care_invite',
+			{ invite_code: normalizedCode, relationship_to_senior: relationship.trim() }
+		);
 
-			const token = session?.access_token;
-
-			if (token && PUBLIC_BACKEND_URL) {
-				const response = await fetch(
-					`${PUBLIC_BACKEND_URL}/caregiver/${user.id}/complete-onboarding`,
-					{
-						method: 'POST',
-						headers: {
-							'Authorization': `Bearer ${token}`,
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify({
-							senior_name: seniorName.trim(),
-							senior_phone: fullSeniorPhone,
-							relationship: relationship.trim()
-						})
-					}
-				);
-
-				if (response.ok) {
-					onboardSuccess = true;
-				}
-			}
-		} catch (err) {
-			console.warn('Backend onboarding call failed, trying direct Supabase link:', err);
+		if (connectionError || !connection?.[0]?.senior_id) {
+			saving = false;
+			errorMessage = careInviteErrorMessage(connectionError, 'redeem');
+			return;
 		}
 
-		// Direct Supabase fallback
-		if (!onboardSuccess) {
-			try {
-				// Search if senior already exists with this phone
-				const { data: existingSenior } = await supabase
-					.from('profiles')
-					.select('id')
-					.eq('phone', fullSeniorPhone)
-					.maybeSingle();
-
-				if (existingSenior) {
-					await supabase.from('caregiver_links').upsert({
-						caregiver_id: user.id,
-						senior_id: existingSenior.id
-					}, { onConflict: 'caregiver_id,senior_id' });
-				}
-			} catch (e) {
-				console.warn('Supabase link fallback error:', e);
-			}
-		}
-
+		rememberCareRecipient(connection[0].senior_id);
 		goto('/caregiver/dashboard');
 	}
 </script>
@@ -560,12 +481,10 @@
 
 						<div>
 
-							<strong>
-								Your senior
-							</strong>
+							<strong>Connect securely</strong>
 
 							<p>
-								Who you're caring for
+								Enter their invitation code
 							</p>
 
 						</div>
@@ -879,27 +798,19 @@
 
 					<section class="form-section">
 
-						<p class="welcome">
-							YOUR SENIOR
-						</p>
+					<p class="welcome">PRIVATE CONNECTION</p>
 
 
 						<h2>
 
-							Who are you
-
-							<span>
-								caring for?
-							</span>
+							Enter your <span>invitation code.</span>
 
 						</h2>
 
 
 						<p class="subtitle">
 
-							Add the person you'd like
-							Vcare to check in with and
-							help you stay connected to.
+							Ask the senior to open Care Circle and generate a code. No email or phone search is needed.
 
 						</p>
 
@@ -907,146 +818,13 @@
 						<div class="fields">
 
 
-							<!-- SENIOR NAME -->
-
 							<div class="field full">
-
-								<label for="seniorName">
-									Senior's name
-								</label>
-
+								<label for="inviteCode">Vcare invitation code</label>
 								<div class="input-shell">
-
-									<input
-										id="seniorName"
-										type="text"
-										bind:value={seniorName}
-										placeholder="e.g. Shanta Devi"
-									/>
-
-									<span class="input-icon">
-										♥
-									</span>
-
+									<input id="inviteCode" type="text" bind:value={inviteCode} placeholder="VCARE-ABC123" autocomplete="one-time-code" spellcheck="false" maxlength="12" />
+									<span class="input-icon">♡</span>
 								</div>
-
-							</div>
-
-
-							<!-- =================================================
-							     SENIOR PHONE
-							================================================= -->
-
-							<div class="field full">
-
-								<label for="seniorPhone">
-									Senior's phone number
-								</label>
-
-
-								<div class="phone-input">
-
-
-									<div class="country-picker">
-
-
-										<button
-											type="button"
-											class="country-trigger"
-											onclick={() =>
-												seniorCountryDropdownOpen =
-													!seniorCountryDropdownOpen}
-										>
-
-											<span>
-												{countryCodes.find(
-													(c) =>
-														c.code ===
-														seniorCountryCode
-												)?.flag}
-											</span>
-
-
-											<span>
-												{seniorCountryCode}
-											</span>
-
-
-											<span class="chevron">
-												⌄
-											</span>
-
-										</button>
-
-
-										{#if seniorCountryDropdownOpen}
-
-											<div class="country-menu">
-
-
-												<input
-													class="country-search"
-													type="text"
-													placeholder="Search country..."
-													bind:value={seniorCountrySearch}
-												/>
-
-
-												<div class="country-list">
-
-													{#each filteredSeniorCountries as item}
-
-														<button
-															type="button"
-															class="country-option"
-															onclick={() =>
-																selectSeniorCountry(item)}
-														>
-
-															<span>
-																{item.flag}
-															</span>
-
-															<span>
-																{item.code}
-															</span>
-
-															<span class="country-name">
-																{item.country}
-															</span>
-
-														</button>
-
-													{/each}
-
-
-													{#if filteredSeniorCountries.length === 0}
-
-														<div class="no-country">
-															No country found
-														</div>
-
-													{/if}
-
-												</div>
-
-											</div>
-
-										{/if}
-
-									</div>
-
-
-									<input
-										id="seniorPhone"
-										type="tel"
-										bind:value={seniorPhone}
-										placeholder="Phone number"
-										inputmode="tel"
-									/>
-
-								</div>
-
+								<small class="connected">Codes work once and expire after 15 minutes.</small>
 							</div>
 
 
@@ -1065,8 +843,7 @@
 									</strong>
 
 									<p>
-										Vcare can now help you stay
-										close to the person you care for.
+									After the code is confirmed, both portals will use the same senior profile and care information.
 									</p>
 
 								</section>
@@ -1137,9 +914,7 @@
 							disabled={saving}
 						>
 
-							{saving
-								? 'Preparing Vcare...'
-								: 'Enter my Vcare'}
+							{saving ? 'Connecting…' : 'Connect & enter Vcare'}
 
 							<span>
 								→

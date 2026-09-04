@@ -2,7 +2,9 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
+	import { chooseCareRecipient } from '$lib/careConnections';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
+	import '../theme.css';
 
 	/* =====================================================
 	   STATE
@@ -103,37 +105,12 @@
 				}
 			}
 
-			if ((!seniors || seniors.length === 0) && profile?.emergency_contact_name) {
-				if (profile.emergency_contact_phone) {
-					try {
-						const { data: matched } = await supabase
-							.from('profiles')
-							.select('*')
-							.eq('phone', profile.emergency_contact_phone)
-							.maybeSingle();
-						if (matched) {
-							seniors = [matched];
-						}
-					} catch (e) {
-						console.warn('Matching senior by phone error:', e);
-					}
-				}
-
-				if (!seniors || seniors.length === 0) {
-					seniors = [{
-						id: user.id,
-						full_name: profile.emergency_contact_name,
-						phone: profile.emergency_contact_phone || '',
-						role: 'senior'
-					}];
-				}
-			}
 		} catch (err) {
 			console.error('Supabase direct senior query error:', err);
 		}
 
 		if (seniors && seniors.length > 0) {
-			const firstSenior = seniors[0];
+			const firstSenior = chooseCareRecipient(seniors);
 			senior = {
 				id: firstSenior.id,
 				full_name: firstSenior.full_name || '',
@@ -253,20 +230,13 @@
 	}
 
 	let seniorFirstName = $derived((senior.full_name || 'Senior').split(' ')[0]);
-	let seniorInitials = $derived(
-		(senior.full_name || 'S')
-			.split(' ')
-			.map(n => n.charAt(0))
-			.join('')
-			.toUpperCase()
-	);
 </script>
 
 <svelte:head>
-	<title>{seniorFirstName}'s Profile — Vcare.life</title>
+	<title>Senior Profile & Care Details — Vcare.life</title>
 </svelte:head>
 
-<div class="app">
+<div class="app" data-caregiver-portal>
 
 	<!-- SIDEBAR -->
 	<aside class="sidebar">
@@ -305,7 +275,7 @@
 
 		<div class="sidebar-bottom">
 			<div class="mini-senior">
-				<div class="mini-avatar">{seniorInitials}</div>
+				<div class="mini-avatar" aria-hidden="true">♡</div>
 				<div>
 					<small>CARING FOR</small>
 					<strong>{senior.full_name || 'Senior'}</strong>
@@ -330,8 +300,8 @@
 		<header class="topbar">
 			<div>
 				<p class="date">{currentDate}</p>
-				<h1>{seniorFirstName}'s Profile & Care Details</h1>
-				<p class="intro">Update senior information, emergency contacts, and personalized call settings.</p>
+				<h1>Senior Profile & Care Details</h1>
+				<p class="intro">Review the person receiving care, emergency contacts, and personalized call settings.</p>
 			</div>
 
 			<div class="top-actions">
@@ -391,6 +361,7 @@
 								bind:value={senior.full_name}
 								placeholder="e.g. Kalyani Devi"
 							/>
+							<small class="hint">This is the care recipient name shown throughout the caregiver portal. Correct it here and select “Save Changes”.</small>
 						</div>
 
 						<div class="field">

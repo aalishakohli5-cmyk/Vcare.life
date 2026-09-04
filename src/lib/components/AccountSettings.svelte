@@ -86,9 +86,10 @@
 			actualRole = data.role;
 			await goto(data.role === 'caregiver' ? '/caregiver/dashboard' : '/senior/dashboard');
 		} catch (error) {
-			roleMessage = error instanceof Error
-				? error.message
-				: 'Your role could not be changed. Please try again.';
+			const technicalMessage = error instanceof Error ? error.message : '';
+			roleMessage = technicalMessage.includes('permission denied')
+				? 'Role switching needs a small database permission update. Please ask the site administrator to finish setup.'
+				: technicalMessage || 'Your role could not be changed. Please try again.';
 			switchingRole = false;
 		}
 	}

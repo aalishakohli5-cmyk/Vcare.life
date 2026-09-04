@@ -1,88 +1,129 @@
 <script>
-	import { tick } from 'svelte';
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { supabase } from '$lib/supabase';
+	import { careInviteErrorMessage } from '$lib/careConnections';
 
-	let caregivers = $state([
-		{
-			id: 1,
-			name: 'Monica',
-			relation: 'Primary caregiver',
-			phone: '+91 98765 43210',
-			initial: 'M',
-			primary: true
-		},
-		{
-			id: 2,
-			name: 'Rahul',
-			relation: 'Son',
-			phone: '+91 91234 56789',
-			initial: 'R',
-			primary: false
-		}
-	]);
-
-	let showAddForm = $state(false);
-	let name = $state('');
-	let relation = $state('');
-	let phone = $state('');
+	/** @type {Array<{linkId: number, id: string, name: string, relation: string, phone: string, initial: string, primary: boolean}>} */
+	let caregivers = $state([]);
+	let loading = $state(true);
 	let formError = $state('');
-	let saving = $state(false);
+	let inviteCode = $state('');
+	let inviteExpiresAt = $state('');
+	let generating = $state(false);
+	let copyLabel = $state('Copy code');
+
+	onMount(loadCareCircle);
+
+	async function loadCareCircle() {
+		loading = true;
+		formError = '';
+
+		const { data: { user } } = await supabase.auth.getUser();
+		if (!user) {
+			goto('/auth?role=senior');
+			return;
+		}
+
+		const { data: links, error: linksError } = await supabase
+			.from('caregiver_links')
+			.select('id, caregiver_id, relationship, created_at')
+			.eq('senior_id', user.id)
+			.order('created_at', { ascending: true });
+
+		if (linksError) {
+			formError = 'We could not load your Care Circle. Please try again.';
+			loading = false;
+			return;
+		}
+
+		const caregiverIds = (links || []).map((link) => link.caregiver_id);
+		if (caregiverIds.length === 0) {
+			caregivers = [];
+			loading = false;
+			return;
+		}
+
+		const { data: profiles, error: profilesError } = await supabase
+			.from('profiles')
+			.select('id, full_name, phone')
+			.in('id', caregiverIds);
+
+		if (profilesError) {
+			formError = 'We found your connections but could not load their profiles.';
+			loading = false;
+			return;
+		}
+
+		caregivers = (links || []).map((link) => {
+			const profile = (profiles || []).find((person) => person.id === link.caregiver_id);
+			const displayName = profile?.full_name || 'Caregiver';
+			return {
+				linkId: link.id,
+				id: link.caregiver_id,
+				name: displayName,
+				relation: link.relationship || 'Trusted caregiver',
+				phone: profile?.phone || '',
+				initial: displayName.charAt(0).toUpperCase(),
+				primary: false
+			};
+		});
+
+		loading = false;
+	}
 
 	function goBack() {
 		goto('/senior/dashboard');
 	}
 
-	async function addCaregiver() {
+	async function generateInvite() {
+		generating = true;
 		formError = '';
+		copyLabel = 'Copy code';
 
-		if (!name.trim()) {
-			formError = 'Please enter the person’s name.';
+		const { data, error } = await supabase.rpc('generate_care_invite');
+		generating = false;
+
+		if (error || !data?.[0]?.code) {
+			formError = careInviteErrorMessage(error, 'generate');
 			return;
 		}
 
-		if (!relation.trim()) {
-			formError = 'Please enter their relationship to you.';
-			return;
-		}
-
-		if (phone.trim() && !/^\+?[0-9\s()-]{7,20}$/.test(phone.trim())) {
-			formError = 'Please enter a valid phone number.';
-			return;
-		}
-
-		saving = true;
-		await tick();
-
-		caregivers = [
-			...caregivers,
-			{
-				id: Date.now(),
-				name: name.trim(),
-				relation: relation.trim(),
-				phone: phone.trim(),
-				initial: name.trim().charAt(0).toUpperCase(),
-				primary: caregivers.length === 0
-			}
-		];
-
-		name = '';
-		relation = '';
-		phone = '';
-		showAddForm = false;
-		saving = false;
+		inviteCode = data[0].code;
+		inviteExpiresAt = data[0].expires_at;
 	}
 
-	function removeCaregiver(id) {
-		caregivers = caregivers.filter(
-			(caregiver) => caregiver.id !== id
-		);
+	async function copyInvite() {
+		if (!inviteCode) return;
+		try {
+			await navigator.clipboard.writeText(inviteCode);
+			copyLabel = 'Copied!';
+		} catch {
+			formError = 'Copying was blocked. Select the code and copy it manually.';
+		}
 	}
 
-	function makePrimary(id) {
-		caregivers = caregivers.map((caregiver) => ({
-			...caregiver,
-			primary: caregiver.id === id
-		}));
+	/** @param {string} value */
+	function inviteExpiryLabel(value) {
+		if (!value) return '';
+		return new Intl.DateTimeFormat(undefined, {
+			hour: 'numeric',
+			minute: '2-digit',
+			timeZoneName: 'short'
+		}).format(new Date(value));
+	}
+
+	/** @param {number} linkId @param {string} name */
+	async function removeCaregiver(linkId, name) {
+		if (!window.confirm(`Remove ${name} from your Care Circle?`)) return;
+
+		const { error } = await supabase.from('caregiver_links').delete().eq('id', linkId);
+		if (error) {
+			formError = 'This caregiver could not be removed. Please try again.';
+			return;
+		}
+
+		caregivers = caregivers.filter((caregiver) => caregiver.linkId !== linkId);
 	}
 </script>
 
@@ -181,18 +222,18 @@
 
 				<button
 					class="add-button"
-					onclick={() =>
-						(showAddForm = !showAddForm)}
+					onclick={generateInvite}
+					disabled={generating}
 				>
-					＋ Add person
+					{generating ? 'Creating code…' : '＋ Invite caregiver'}
 				</button>
 
 			</div>
 
 
-			{#if showAddForm}
+			{#if inviteCode}
 
-				<form class="add-panel" onsubmit={(event) => { event.preventDefault(); addCaregiver(); }} novalidate>
+				<section class="add-panel invite-panel" aria-labelledby="invite-heading">
 
 					<div class="form-heading">
 
@@ -201,98 +242,41 @@
 						</div>
 
 						<div>
-							<strong>
-								Add someone you trust
-							</strong>
+							<strong id="invite-heading">Share this one-time code</strong>
 
 							<p>
-								They’ll become part of your Care Circle.
+								Your caregiver enters it on their dashboard. It expires at {inviteExpiryLabel(inviteExpiresAt)}.
 							</p>
 						</div>
 
 					</div>
 
 
-					<div class="form-grid">
-
-						<label for="care-name">
-							<span>Name</span>
-
-							<input
-								id="care-name"
-								name="name"
-								type="text"
-								placeholder="e.g. Monica"
-								bind:value={name}
-								autocomplete="name"
-								required
-							/>
-						</label>
-
-
-						<label for="care-relation">
-							<span>Relationship</span>
-
-							<input
-								id="care-relation"
-								name="relationship"
-								type="text"
-								placeholder="e.g. Daughter"
-								bind:value={relation}
-								required
-							/>
-						</label>
-
-
-						<label for="care-phone">
-							<span>Phone</span>
-
-							<input
-								id="care-phone"
-								name="phone"
-								type="tel"
-								placeholder="+91..."
-								bind:value={phone}
-								autocomplete="tel"
-							/>
-						</label>
-
-					</div>
-
-					{#if formError}
-						<p class="form-error" role="alert">{formError}</p>
-					{/if}
+					<div class="invite-code" aria-label={`Invitation code ${inviteCode}`}>{inviteCode}</div>
 
 
 					<div class="form-actions">
 
-						<button
-							type="button"
-							class="cancel-button"
-							onclick={() =>
-								(showAddForm = false)}
-						>
-							Cancel
-						</button>
-
-						<button
-							type="submit"
-							class="save-button"
-							disabled={saving}
-						>
-							{saving ? 'Adding…' : 'Add to Care Circle →'}
-						</button>
+						<button type="button" class="cancel-button" onclick={() => (inviteCode = '')}>Close</button>
+						<button type="button" class="save-button" onclick={copyInvite}>{copyLabel}</button>
 
 					</div>
 
-				</form>
+				</section>
 
 			{/if}
 
 
 			<!-- CAREGIVERS -->
 
-			<div class="caregiver-list">
+			{#if formError}
+				<p class="form-error" role="alert">{formError}</p>
+			{/if}
+
+			<div class="caregiver-list" aria-live="polite">
+				{#if loading}
+					<p class="loading-copy">Loading your trusted people…</p>
+				{/if}
 
 				{#each caregivers as caregiver}
 
@@ -343,19 +327,6 @@
 
 						<div class="caregiver-actions">
 
-							{#if !caregiver.primary}
-
-								<button
-									class="primary-button"
-									onclick={() =>
-										makePrimary(caregiver.id)}
-								>
-									Make primary
-								</button>
-
-							{/if}
-
-
 							{#if caregiver.phone}
 
 								<a
@@ -371,9 +342,8 @@
 
 							<button
 								class="remove-button"
-								onclick={() =>
-									removeCaregiver(caregiver.id)}
-								aria-label="Remove caregiver"
+								onclick={() => removeCaregiver(caregiver.linkId, caregiver.name)}
+								aria-label={`Remove ${caregiver.name} from your Care Circle`}
 							>
 								×
 							</button>
@@ -387,7 +357,7 @@
 			</div>
 
 
-			{#if caregivers.length === 0}
+			{#if !loading && caregivers.length === 0}
 
 				<div class="empty-state">
 
@@ -404,11 +374,8 @@
 						them close when you need support.
 					</p>
 
-					<button
-						onclick={() =>
-							(showAddForm = true)}
-					>
-						＋ Add your first person
+					<button onclick={generateInvite} disabled={generating}>
+						{generating ? 'Creating code…' : '＋ Invite your first caregiver'}
 					</button>
 
 				</div>
@@ -1569,6 +1536,10 @@
 	.care-strip, .care-card, .summary-card, .mini-card { border-color: rgba(32,83,63,.11); background: rgba(255,255,255,.78); box-shadow: 0 18px 56px rgba(24,62,47,.07); }
 	.caregiver-row { border-radius: 16px; padding-inline: 14px; transition: background .2s ease, transform .2s ease; }
 	.caregiver-row:hover { background: #f5f8f2; transform: translateX(3px); }
+	.invite-panel { border: 1px solid #cfe2d8; background: linear-gradient(135deg,#f4fbf7,#edf7f1); }
+	.invite-code { margin: 20px 0; padding: 18px; border: 2px dashed #6ca88b; border-radius: 16px; background: white; color: #124b38; font-size: clamp(25px,3vw,38px); font-weight: 900; letter-spacing: .12em; text-align: center; }
+	.loading-copy { padding: 24px 12px; color: #63756d; font-weight: 700; }
+	.add-button:disabled, .empty-state button:disabled { opacity: .65; cursor: wait; }
 
 	.senior-sidebar { grid-row: 1 / 3; position: sticky; top: 0; height: 100vh; padding: 27px 18px 22px; background: linear-gradient(165deg,rgba(255,255,255,.055),transparent 42%),#123f31; box-shadow: 14px 0 40px rgba(21,62,48,.11); display: flex; flex-direction: column; z-index: 30; }
 	.side-brand { display: flex; align-items: center; gap: 11px; padding: 0 7px 28px; color: white; text-decoration: none; }
@@ -1592,5 +1563,5 @@
 	.side-note strong { font-size: 10px; }
 	.side-note small { margin-top: 3px; color: rgba(255,255,255,.5); font-size: 8px; }
 
-	@media (max-width: 820px) { .page { display:block; } .senior-sidebar { display:none; } .topbar { padding-inline:20px; } }
+	@media (max-width: 820px) { .page { display:block; } .senior-sidebar { display:none; } .topbar { padding-inline:20px; } .invite-code { letter-spacing:.06em; } }
 </style>

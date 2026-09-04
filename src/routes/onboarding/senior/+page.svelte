@@ -186,25 +186,6 @@ const countryCodes = [
       return;
     }
 
-    // Auto-link caregiver if matching phone is already registered
-    try {
-      const { data: matchedCaregiver } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('phone', fullEmergencyPhone)
-        .eq('role', 'caregiver')
-        .maybeSingle();
-
-      if (matchedCaregiver?.id) {
-        await supabase.from('caregiver_links').upsert({
-          caregiver_id: matchedCaregiver.id,
-          senior_id: user.id
-        }, { onConflict: 'caregiver_id,senior_id' });
-      }
-    } catch (linkErr) {
-      console.warn('Auto caregiver link check:', linkErr);
-    }
-
     goto('/senior/dashboard');
   }
 </script>

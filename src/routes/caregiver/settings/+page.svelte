@@ -1,8 +1,9 @@
 <script>
 	import AccountSettings from '$lib/components/AccountSettings.svelte';
+	import '../theme.css';
 </script>
 
-<div class="caregiver-settings-shell">
+<div class="caregiver-settings-shell" data-caregiver-portal>
 	<aside class="sidebar">
 		<a href="/caregiver/dashboard" class="brand">
 			<span class="brand-heart" aria-hidden="true">♥</span>
