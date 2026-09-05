@@ -172,6 +172,195 @@
 
 		goto('/senior/dashboard');
 	}
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { supabase } from '$lib/supabase';
+
+  let fullName = $state('');
+  let email = $state('');
+  let dateOfBirth = $state('');
+  let phone = $state('');
+  let countryCode = $state('+91');
+  let countrySearch = $state('');
+let countryDropdownOpen = $state(false);
+
+let filteredCountries = $derived(
+    countryCodes.filter((item) =>
+        item.country.toLowerCase().includes(countrySearch.toLowerCase()) ||
+        item.code.includes(countrySearch)
+    )
+);
+
+function selectCountry(item) {
+    countryCode = item.code;
+    countrySearch = '';
+    countryDropdownOpen = false;
+}
+
+const countryCodes = [
+    { country: 'India', flag: '🇮🇳', code: '+91' },
+    { country: 'United States', flag: '🇺🇸', code: '+1' },
+    { country: 'United Kingdom', flag: '🇬🇧', code: '+44' },
+    { country: 'Canada', flag: '🇨🇦', code: '+1' },
+    { country: 'Australia', flag: '🇦🇺', code: '+61' },
+    { country: 'UAE', flag: '🇦🇪', code: '+971' },
+    { country: 'Singapore', flag: '🇸🇬', code: '+65' },
+    { country: 'Germany', flag: '🇩🇪', code: '+49' },
+    { country: 'France', flag: '🇫🇷', code: '+33' },
+    { country: 'Japan', flag: '🇯🇵', code: '+81' },
+    { country: 'South Korea', flag: '🇰🇷', code: '+82' },
+    { country: 'China', flag: '🇨🇳', code: '+86' },
+    { country: 'New Zealand', flag: '🇳🇿', code: '+64' },
+    { country: 'Italy', flag: '🇮🇹', code: '+39' },
+    { country: 'Spain', flag: '🇪🇸', code: '+34' },
+    { country: 'Netherlands', flag: '🇳🇱', code: '+31' },
+    { country: 'Switzerland', flag: '🇨🇭', code: '+41' },
+    { country: 'Saudi Arabia', flag: '🇸🇦', code: '+966' },
+    { country: 'Qatar', flag: '🇶🇦', code: '+974' },
+    { country: 'Malaysia', flag: '🇲🇾', code: '+60' }
+];
+
+  let gender = $state('');
+  let language = $state('English');
+
+  let emergencyName = $state('');
+  let emergencyRelationship = $state('');
+  let emergencyPhone = $state('');
+  
+
+  let step = $state(1);
+  let loading = $state(true);
+  let saving = $state(false);
+  let errorMessage = $state('');
+
+  let phoneDropped = $state(false);
+
+  onMount(async () => {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      goto('/auth?role=senior');
+      return;
+    }
+
+    email = user.email ?? '';
+
+    fullName =
+      user.user_metadata?.full_name ??
+      user.user_metadata?.name ??
+      '';
+
+    loading = false;
+  });
+
+  function togglePhone() {
+    phoneDropped = !phoneDropped;
+  }
+
+  function nextStep() {
+    errorMessage = '';
+
+    if (step === 1) {
+      if (!fullName.trim()) {
+        errorMessage = 'Please enter your name.';
+        return;
+      }
+
+      if (!dateOfBirth) {
+        errorMessage = 'Please enter your date of birth.';
+        return;
+      }
+
+      if (!phone.trim()) {
+        errorMessage = 'Please enter your phone number.';
+        return;
+      }
+    }
+
+    if (step < 3) {
+      step += 1;
+    }
+  }
+
+  function previousStep() {
+    errorMessage = '';
+
+    if (step > 1) {
+      step -= 1;
+    }
+  }
+
+  function cleanPhone(value) {
+    return (value || '').replace(/\D/g, '');
+  }
+
+  async function finishSetup() {
+    errorMessage = '';
+
+    if (!emergencyName.trim()) {
+      errorMessage = 'Please add someone from your support circle.';
+      return;
+    }
+
+    if (!emergencyPhone.trim()) {
+      errorMessage = 'Please enter their phone number.';
+      return;
+    }
+
+    saving = true;
+
+    const {
+      data: { user },
+      error: userError
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      saving = false;
+      errorMessage = 'Your session expired. Please sign in again.';
+      return;
+    }
+
+    const fullPhone = phone.trim().startsWith('+')
+      ? phone.trim()
+      : `${countryCode}${cleanPhone(phone)}`;
+
+    const fullEmergencyPhone = emergencyPhone.trim().startsWith('+')
+      ? emergencyPhone.trim()
+      : `${countryCode}${cleanPhone(emergencyPhone)}`;
+
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        role: 'senior',
+        full_name: fullName.trim(),
+        email: user.email,
+        date_of_birth: dateOfBirth,
+        phone: fullPhone,
+        gender: gender || null,
+        preferred_language: language,
+        emergency_contact_name: emergencyName.trim(),
+        emergency_contact_relationship:
+          emergencyRelationship.trim() || 'Caregiver',
+        emergency_contact_phone: fullEmergencyPhone,
+        onboarding_complete: true,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error(error);
+
+      saving = false;
+      errorMessage =
+        'Your profile could not be saved yet. Please try again.';
+
+      return;
+    }
+
+    goto('/senior/dashboard');
+  }
 </script>
 
 <svelte:head>

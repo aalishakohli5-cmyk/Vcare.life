@@ -4,3 +4,27 @@
   display         : flex;
   justify-content : center;
 }
+
+html { scroll-behavior: smooth; }
+body { min-width: 320px; }
+button, input, select, textarea { font: inherit; }
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #cce75a;
+  outline-offset: 3px;
+}
+
+button:disabled,
+[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

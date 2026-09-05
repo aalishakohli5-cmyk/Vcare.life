@@ -1,0 +1,456 @@
+/* Shared caregiver portal theme.
+   It uses the same spacing, typography and card language as the senior portal,
+   with a cooler teal accent so each portal remains immediately recognisable. */
+
+[data-caregiver-portal] {
+	--caregiver-ink: #143f36;
+	--caregiver-muted: #5d716b;
+	--caregiver-teal: #0f5551;
+	--caregiver-teal-strong: #0b4643;
+	--caregiver-mint: #ccecdf;
+	--caregiver-mint-soft: #edf8f3;
+	--caregiver-lime: #d6ed62;
+	--caregiver-line: #dce8e2;
+	--caregiver-surface: #ffffff;
+	--caregiver-bg: #f6faf8;
+
+	min-height: 100vh;
+	background:
+		radial-gradient(circle at 96% 2%, rgba(201, 238, 220, 0.62), transparent 28%),
+		linear-gradient(145deg, #ffffff 0%, var(--caregiver-bg) 55%, #eef8f3 100%) !important;
+	color: var(--caregiver-ink) !important;
+	font-family: 'Avenir Next', 'Trebuchet MS', Verdana, sans-serif !important;
+}
+
+[data-caregiver-portal] *,
+[data-caregiver-portal] *::before,
+[data-caregiver-portal] *::after {
+	box-sizing: border-box;
+	font-family: 'Avenir Next', 'Trebuchet MS', Verdana, sans-serif !important;
+}
+
+[data-caregiver-portal].app,
+[data-caregiver-portal].caregiver-settings-shell {
+	display: grid !important;
+	grid-template-columns: 280px minmax(0, 1fr) !important;
+}
+
+[data-caregiver-portal] .sidebar {
+	position: sticky !important;
+	top: 0 !important;
+	height: 100vh !important;
+	min-height: 100vh;
+	overflow-y: auto;
+	padding: 26px 20px 22px !important;
+	background:
+		linear-gradient(160deg, rgba(255, 255, 255, 0.07), transparent 44%),
+		linear-gradient(180deg, var(--caregiver-teal-strong), var(--caregiver-teal)) !important;
+	border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+	box-shadow: 14px 0 40px rgba(16, 70, 62, 0.1);
+}
+
+[data-caregiver-portal] .brand {
+	gap: 12px !important;
+	padding: 0 7px 24px !important;
+}
+
+[data-caregiver-portal] .brand-heart {
+	width: 46px !important;
+	height: 46px !important;
+	flex: 0 0 46px;
+	border-radius: 14px !important;
+	background: var(--caregiver-lime) !important;
+	color: #123f31 !important;
+	font-size: 22px !important;
+	box-shadow: 0 9px 25px rgba(0, 0, 0, 0.14);
+}
+
+[data-caregiver-portal] .brand strong {
+	display: block;
+	color: #fff !important;
+	font-size: 21px !important;
+	line-height: 1.1;
+}
+
+[data-caregiver-portal] .brand span,
+[data-caregiver-portal] .brand small {
+	display: block;
+	margin-top: 4px !important;
+	color: rgba(255, 255, 255, 0.68) !important;
+	font-size: 13px !important;
+}
+
+[data-caregiver-portal] .care-label {
+	margin: 26px 12px 13px !important;
+	color: #b9e7d7 !important;
+	font-size: 12px !important;
+	font-weight: 900 !important;
+	letter-spacing: 0.13em !important;
+}
+
+[data-caregiver-portal] nav {
+	display: grid;
+	gap: 7px !important;
+}
+
+[data-caregiver-portal] .nav-item,
+[data-caregiver-portal] nav > a {
+	min-height: 58px !important;
+	padding: 10px 13px !important;
+	gap: 12px !important;
+	border: 1px solid transparent;
+	border-radius: 15px !important;
+	color: rgba(255, 255, 255, 0.82) !important;
+	font-size: 16px !important;
+	font-weight: 800 !important;
+	line-height: 1.3;
+}
+
+[data-caregiver-portal] .nav-item:hover,
+[data-caregiver-portal] nav > a:hover {
+	border-color: rgba(255, 255, 255, 0.13);
+	background: rgba(255, 255, 255, 0.09) !important;
+	color: #fff !important;
+}
+
+[data-caregiver-portal] .nav-item.active,
+[data-caregiver-portal] nav > a.active {
+	border-color: #e2f6ee;
+	background: linear-gradient(135deg, #d9f2e8, var(--caregiver-mint)) !important;
+	color: #123f37 !important;
+	box-shadow: 0 10px 24px rgba(6, 45, 42, 0.2);
+}
+
+[data-caregiver-portal] .nav-icon,
+[data-caregiver-portal] nav > a > span {
+	width: 32px !important;
+	font-size: 19px !important;
+}
+
+[data-caregiver-portal] .mini-senior {
+	padding: 13px !important;
+	border-radius: 16px !important;
+	background: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-caregiver-portal] .mini-avatar,
+[data-caregiver-portal] .profile-avatar {
+	width: 42px !important;
+	height: 42px !important;
+	font-size: 14px !important;
+}
+
+[data-caregiver-portal] .mini-avatar {
+	background: var(--caregiver-mint) !important;
+	color: var(--caregiver-teal) !important;
+	font-size: 22px !important;
+	font-weight: 500 !important;
+}
+
+[data-caregiver-portal] .senior-avatar {
+	background: linear-gradient(145deg, #dff5eb, var(--caregiver-mint)) !important;
+	color: var(--caregiver-teal) !important;
+	font-size: 34px !important;
+	font-weight: 500 !important;
+}
+
+[data-caregiver-portal] .senior-details-link {
+	display: inline-flex;
+	margin-top: 9px;
+	color: var(--caregiver-teal) !important;
+	font-size: 14px !important;
+	font-weight: 850 !important;
+	text-decoration: underline;
+	text-decoration-thickness: 1.5px;
+	text-underline-offset: 4px;
+}
+
+[data-caregiver-portal] .senior-details-link:hover {
+	color: #083d39 !important;
+}
+
+[data-caregiver-portal] .connection-panel {
+	display: grid;
+	grid-template-columns: minmax(240px, 1fr) minmax(280px, 0.9fr);
+	gap: 18px 28px;
+	align-items: end;
+	margin: 0 0 22px;
+	padding: 22px 24px;
+	border: 1px solid var(--caregiver-line);
+	border-radius: 20px;
+	background: linear-gradient(135deg, #f4fbf7, #e7f6ef);
+}
+
+[data-caregiver-portal] .connection-panel h2 {
+	margin: 0 0 5px !important;
+	font-size: 21px !important;
+}
+
+[data-caregiver-portal] .connection-panel p {
+	margin: 0;
+}
+
+[data-caregiver-portal] .connection-form label,
+[data-caregiver-portal] .senior-selector > span {
+	display: block;
+	margin-bottom: 7px;
+	font-size: 13px !important;
+	font-weight: 800;
+}
+
+[data-caregiver-portal] .connection-form > div {
+	display: flex;
+	gap: 9px;
+}
+
+[data-caregiver-portal] .connection-form input {
+	min-width: 0;
+	flex: 1;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+}
+
+[data-caregiver-portal] .connection-form button {
+	min-height: 48px;
+	padding: 0 20px;
+	border: 0;
+	border-radius: 13px;
+	background: var(--caregiver-teal);
+	color: white;
+	font-weight: 850;
+	cursor: pointer;
+}
+
+[data-caregiver-portal] .connection-form button:disabled { opacity: 0.65; cursor: wait; }
+[data-caregiver-portal] .senior-selector { grid-column: 1 / -1; }
+[data-caregiver-portal] .senior-selector select { width: 100%; }
+[data-caregiver-portal] .connection-success { grid-column: 1 / -1; color: #176a43 !important; font-weight: 800; }
+[data-caregiver-portal] .connection-error { grid-column: 1 / -1; color: #a53e32 !important; font-weight: 800; }
+
+[data-caregiver-portal] .mini-senior small,
+[data-caregiver-portal] .profile-copy span {
+	font-size: 12px !important;
+	line-height: 1.3;
+}
+
+[data-caregiver-portal] .mini-senior strong,
+[data-caregiver-portal] .profile-copy strong {
+	font-size: 14px !important;
+	line-height: 1.35;
+}
+
+[data-caregiver-portal] .logout {
+	min-width: 44px;
+	min-height: 44px;
+	border-radius: 12px !important;
+	font-size: 19px !important;
+}
+
+[data-caregiver-portal] .logout:hover {
+	background: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-caregiver-portal] .main {
+	width: min(100%, 1480px) !important;
+	max-width: none !important;
+	min-width: 0;
+	padding: clamp(30px, 4vw, 58px) clamp(24px, 4vw, 64px) 64px !important;
+}
+
+[data-caregiver-portal] .topbar {
+	align-items: center !important;
+	margin-bottom: 30px !important;
+	padding: 22px 24px;
+	border: 1px solid rgba(43, 118, 103, 0.12);
+	border-radius: 22px;
+	background: rgba(255, 255, 255, 0.82);
+	box-shadow: 0 12px 32px rgba(16, 76, 65, 0.06);
+	backdrop-filter: blur(14px);
+}
+
+[data-caregiver-portal] .topbar h1 {
+	margin: 0 !important;
+	color: var(--caregiver-ink) !important;
+	font-family: 'Arial Rounded MT Bold', 'Avenir Next Rounded', 'Avenir Next', sans-serif !important;
+	font-size: clamp(36px, 3.2vw, 52px) !important;
+	line-height: 1.08 !important;
+	letter-spacing: -0.025em !important;
+}
+
+[data-caregiver-portal] .date,
+[data-caregiver-portal] .eyebrow {
+	color: #357e70 !important;
+	font-size: 13px !important;
+	font-weight: 900 !important;
+	letter-spacing: 0.11em !important;
+}
+
+[data-caregiver-portal] .intro {
+	max-width: 760px;
+	margin-top: 9px !important;
+	color: var(--caregiver-muted) !important;
+	font-size: 17px !important;
+	line-height: 1.5 !important;
+}
+
+[data-caregiver-portal] .main :where(p, li, label, input, select, textarea) {
+	font-size: clamp(15px, 0.95vw, 17px) !important;
+	line-height: 1.55 !important;
+}
+
+[data-caregiver-portal] .main :where(button, a) {
+	font-size: max(15px, 0.95rem) !important;
+}
+
+[data-caregiver-portal] .main h2 {
+	color: var(--caregiver-ink) !important;
+	font-family: 'Arial Rounded MT Bold', 'Avenir Next Rounded', 'Avenir Next', sans-serif !important;
+	font-size: clamp(26px, 2vw, 34px) !important;
+	line-height: 1.18 !important;
+}
+
+[data-caregiver-portal] .main h3 {
+	color: var(--caregiver-ink) !important;
+	font-size: clamp(20px, 1.35vw, 24px) !important;
+	line-height: 1.3 !important;
+}
+
+[data-caregiver-portal] :where(.panel, .metric-card, .med-card, .call-card, .card, .empty-card, .loading-state, .senior-card, .contact-card, .alert-panel) {
+	border-color: var(--caregiver-line) !important;
+	background: var(--caregiver-surface) !important;
+	box-shadow: 0 12px 32px rgba(20, 71, 60, 0.07) !important;
+}
+
+[data-caregiver-portal] :where(.panel, .card, .empty-card, .loading-state) {
+	border-radius: 24px !important;
+}
+
+[data-caregiver-portal] :where(.metric-card, .med-card, .call-card, .senior-card, .contact-card) {
+	border-radius: 20px !important;
+}
+
+[data-caregiver-portal] :where(.call-summary-box, .transcript-box, .security-badge, .stat-box, .medicine-row) {
+	border-color: #dce9e3 !important;
+	background: #f4f9f6 !important;
+}
+
+[data-caregiver-portal] :where(.filter-pills, .btn-secondary, .btn-cancel, .preset-tag, .time-tag) {
+	border-color: #d4e4dc !important;
+	background: #edf5f1 !important;
+	color: #254d42 !important;
+}
+
+[data-caregiver-portal] :where(.btn-primary, .btn-submit, .wide-button, .big-call-button) {
+	min-height: 48px;
+	background: var(--caregiver-teal) !important;
+	color: #fff !important;
+	border-radius: 13px !important;
+	box-shadow: 0 8px 20px rgba(15, 85, 81, 0.18) !important;
+}
+
+[data-caregiver-portal] :where(.btn-primary, .btn-submit, .wide-button, .big-call-button):hover {
+	background: var(--caregiver-teal-strong) !important;
+}
+
+[data-caregiver-portal] :where(input, select, textarea) {
+	min-height: 48px;
+	border-color: #ccddd5 !important;
+	background: #fbfdfc !important;
+	color: var(--caregiver-ink) !important;
+}
+
+[data-caregiver-portal] :where(input, select, textarea):focus {
+	border-color: #378c7d !important;
+	box-shadow: 0 0 0 4px rgba(55, 140, 125, 0.14);
+}
+
+[data-caregiver-portal] .metric-icon.total,
+[data-caregiver-portal] .card-icon.stats {
+	background: #e1f2f3 !important;
+	color: #176c73 !important;
+}
+
+[data-caregiver-portal] .pill.active,
+[data-caregiver-portal] .time-tag.active {
+	background: var(--caregiver-teal) !important;
+	color: #fff !important;
+}
+
+[data-caregiver-portal] :where(a, button, input, select, textarea):focus-visible {
+	outline: 3px solid var(--caregiver-lime) !important;
+	outline-offset: 3px !important;
+}
+
+@media (max-width: 1050px) {
+	[data-caregiver-portal].app,
+	[data-caregiver-portal].caregiver-settings-shell {
+		grid-template-columns: 230px minmax(0, 1fr) !important;
+	}
+}
+
+@media (max-width: 760px) {
+	[data-caregiver-portal].app,
+	[data-caregiver-portal].caregiver-settings-shell {
+		display: block !important;
+	}
+
+	[data-caregiver-portal] .sidebar {
+		position: relative !important;
+		width: 100% !important;
+		height: auto !important;
+		min-height: auto !important;
+		padding: 16px !important;
+	}
+
+	[data-caregiver-portal] .brand { padding-bottom: 8px !important; }
+	[data-caregiver-portal] .care-label,
+	[data-caregiver-portal] .mini-senior { display: none !important; }
+
+	[data-caregiver-portal].app .sidebar nav,
+	[data-caregiver-portal].caregiver-settings-shell .sidebar nav {
+		display: grid !important;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 8px !important;
+		margin-top: 14px !important;
+		overflow: visible;
+		padding-bottom: 0;
+	}
+
+	[data-caregiver-portal].app .sidebar nav .nav-item,
+	[data-caregiver-portal].caregiver-settings-shell .sidebar nav > a {
+		min-width: 0;
+		min-height: 62px !important;
+		padding: 7px 5px !important;
+		flex-direction: column;
+		justify-content: center;
+		gap: 3px !important;
+		text-align: center;
+		font-size: 13px !important;
+		line-height: 1.15;
+	}
+
+	[data-caregiver-portal].app .sidebar nav .nav-icon,
+	[data-caregiver-portal].caregiver-settings-shell .sidebar nav > a > span {
+		width: auto !important;
+		font-size: 17px !important;
+	}
+
+	[data-caregiver-portal] .sidebar-bottom { margin-top: 12px !important; }
+	[data-caregiver-portal] .main { padding: 20px 14px 44px !important; }
+	[data-caregiver-portal] .topbar {
+		align-items: flex-start !important;
+		flex-direction: column;
+		padding: 20px !important;
+	}
+	[data-caregiver-portal] .top-actions { width: 100%; flex-wrap: wrap; }
+	[data-caregiver-portal] .connection-panel { grid-template-columns: 1fr; }
+	[data-caregiver-portal] .connection-form > div { align-items: stretch; }
+}
+
+@media (max-width: 520px) {
+	[data-caregiver-portal] .topbar h1 { font-size: 34px !important; }
+	[data-caregiver-portal] .top-actions > * { flex: 1 1 100%; justify-content: center; }
+	[data-caregiver-portal] :where(.metrics-grid, .meds-grid, .stats-row, .form-grid) {
+		grid-template-columns: 1fr !important;
+	}
+}

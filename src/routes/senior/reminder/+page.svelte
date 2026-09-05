@@ -1,13 +1,26 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
 	let reminders = $state([]);
 	let showAddForm = $state(false);
+	let activeFilter = $state('all');
 
 	let title = $state('');
 	let reminderTime = $state('');
 	let note = $state('');
+	let formError = $state('');
+	let saving = $state(false);
+
+	let completedCount = $derived(reminders.filter((reminder) => reminder.completed).length);
+	let progress = $derived(reminders.length ? Math.round((completedCount / reminders.length) * 100) : 0);
+	let visibleReminders = $derived(
+		activeFilter === 'all'
+			? reminders
+			: reminders.filter((reminder) =>
+				activeFilter === 'completed' ? reminder.completed : !reminder.completed
+			)
+	);
 
 	onMount(() => {
 		const saved = localStorage.getItem('vcare-reminders');
@@ -28,8 +41,21 @@
 		);
 	}
 
-	function addReminder() {
-		if (!title.trim() || !reminderTime) return;
+	async function addReminder() {
+		formError = '';
+
+		if (!title.trim()) {
+			formError = 'Please enter what you would like to remember.';
+			return;
+		}
+
+		if (!reminderTime) {
+			formError = 'Please choose a reminder time.';
+			return;
+		}
+
+		saving = true;
+		await tick();
 
 		const reminder = {
 			id: Date.now(),
@@ -47,6 +73,7 @@
 		reminderTime = '';
 		note = '';
 		showAddForm = false;
+		saving = false;
 	}
 
 	function toggleReminder(id) {
@@ -99,26 +126,6 @@
 </svelte:head>
 
 <div class="page">
-	<header class="topbar">
-		<button class="brand" onclick={goBack}>
-			<div class="logo">♥</div>
-
-			<div class="brand-copy">
-				<strong>Vcare.life</strong>
-				<span>A Voice That Cares</span>
-			</div>
-		</button>
-
-		<div class="profile">
-			<div class="avatar">A</div>
-
-			<div class="profile-copy">
-				<strong>Aalisha</strong>
-				<span>My reminders</span>
-			</div>
-		</div>
-	</header>
-
 	<main class="content">
 
 		<!-- HERO -->
@@ -151,6 +158,20 @@
 			</div>
 		</section>
 
+		<section class="progress-strip" aria-label="Reminder progress">
+			<div class="progress-copy">
+				<span class="progress-icon">✓</span>
+				<div>
+					<strong>{completedCount} of {reminders.length} complete</strong>
+					<small>{reminders.length ? 'A little progress makes a calmer day.' : 'Add a reminder to plan your day.'}</small>
+				</div>
+			</div>
+			<div class="progress-meter" aria-label={`${progress}% complete`}>
+				<span style={`width: ${progress}%`}></span>
+			</div>
+			<strong class="progress-value">{progress}%</strong>
+		</section>
+
 		<!-- QUICK ADD -->
 
 		<section class="quick-section">
@@ -160,23 +181,6 @@
 			</div>
 
 			<div class="quick-grid">
-				<button
-					onclick={() =>
-						openPreset(
-							'Take medicine',
-							'Daily medication'
-						)}
-				>
-					<div class="quick-icon medicine-icon">💊</div>
-
-					<div>
-						<strong>Medicine</strong>
-						<span>Medication reminder</span>
-					</div>
-
-					<b>＋</b>
-				</button>
-
 				<button
 					onclick={() =>
 						openPreset(
@@ -239,10 +243,16 @@
 				</button>
 			</div>
 
+			<div class="filter-row" aria-label="Filter reminders">
+				<button class:active={activeFilter === 'all'} onclick={() => (activeFilter = 'all')}>All <span>{reminders.length}</span></button>
+				<button class:active={activeFilter === 'upcoming'} onclick={() => (activeFilter = 'upcoming')}>Upcoming <span>{reminders.length - completedCount}</span></button>
+				<button class:active={activeFilter === 'completed'} onclick={() => (activeFilter = 'completed')}>Completed <span>{completedCount}</span></button>
+			</div>
+
 			<!-- ADD FORM -->
 
 			{#if showAddForm}
-				<div class="add-panel">
+				<form class="add-panel" onsubmit={(event) => { event.preventDefault(); addReminder(); }} novalidate>
 
 					<div class="form-heading">
 						<div class="form-symbol">＋</div>
@@ -259,29 +269,37 @@
 
 					<div class="form-grid">
 
-						<label>
+						<label for="reminder-title">
 							<span>Reminder</span>
 
 							<input
+								id="reminder-title"
+								name="title"
 								type="text"
 								placeholder="e.g. Doctor appointment"
 								bind:value={title}
+								required
 							/>
 						</label>
 
-						<label>
+						<label for="reminder-time">
 							<span>Time</span>
 
 							<input
+								id="reminder-time"
+								name="time"
 								type="time"
 								bind:value={reminderTime}
+								required
 							/>
 						</label>
 
-						<label>
+						<label for="reminder-note">
 							<span>Small note</span>
 
 							<input
+								id="reminder-note"
+								name="note"
 								type="text"
 								placeholder="Optional note"
 								bind:value={note}
@@ -290,9 +308,14 @@
 
 					</div>
 
+					{#if formError}
+						<p class="form-error" role="alert">{formError}</p>
+					{/if}
+
 					<div class="form-actions">
 
 						<button
+							type="button"
 							class="cancel-button"
 							onclick={() =>
 								(showAddForm = false)}
@@ -301,14 +324,15 @@
 						</button>
 
 						<button
+							type="submit"
 							class="save-button"
-							onclick={addReminder}
+							disabled={saving}
 						>
-							Save reminder →
+							{saving ? 'Saving…' : 'Save reminder →'}
 						</button>
 
 					</div>
-				</div>
+				</form>
 			{/if}
 
 			<!-- EMPTY STATE -->
@@ -345,7 +369,7 @@
 
 				<div class="timeline">
 
-					{#each reminders as reminder}
+					{#each visibleReminders as reminder}
 
 						<article
 							class="timeline-row"
@@ -756,7 +780,7 @@
 		display: grid;
 
 		grid-template-columns:
-			repeat(3, 1fr);
+			repeat(2, minmax(0, 1fr));
 
 		gap: 11px;
 	}
@@ -812,10 +836,6 @@
 		place-items: center;
 
 		font-size: 19px;
-	}
-
-	.medicine-icon {
-		background: #eef2c8;
 	}
 
 	.water-icon {
@@ -1032,6 +1052,17 @@
 		gap: 8px;
 	}
 
+	.form-error {
+		margin: 14px 0 0;
+		padding: 11px 13px;
+		border: 1px solid #efc6bd;
+		border-radius: 12px;
+		background: #fff1ed;
+		color: #9b2f24;
+		font-size: 13px;
+		font-weight: 700;
+	}
+
 	.cancel-button,
 	.save-button {
 		padding: 9px 14px;
@@ -1237,8 +1268,12 @@
 	}
 
 	.timeline-marker button {
-		width: 21px;
-		height: 21px;
+		width: 32px;
+		height: 32px;
+		min-width: 32px;
+		min-height: 32px !important;
+		padding: 0;
+		aspect-ratio: 1;
 
 		z-index: 2;
 
@@ -1253,7 +1288,7 @@
 		display: grid;
 		place-items: center;
 
-		font-size: 8px;
+		font-size: 16px !important;
 		font-weight: 900;
 	}
 
@@ -1495,5 +1530,136 @@
 
 			justify-content: flex-end;
 		}
+	}
+
+	/* 2026 senior experience refresh */
+	:global(body) {
+		font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+		background: #f3f5ef;
+	}
+
+	.page {
+		display: grid;
+		grid-template-columns: 250px minmax(0, 1fr);
+		grid-template-rows: auto 1fr;
+		background:
+			radial-gradient(circle at 86% 5%, rgba(203, 230, 99, 0.24), transparent 28%),
+			linear-gradient(180deg, #f8faf5 0%, #f1f4ed 100%);
+	}
+
+	.topbar {
+		grid-column: 2;
+		justify-content: flex-end;
+		height: 82px;
+		border-color: rgba(25, 82, 61, 0.1);
+		background: rgba(250, 252, 247, 0.88);
+		backdrop-filter: blur(18px);
+		position: sticky;
+		top: 0;
+		z-index: 20;
+	}
+
+	.content { grid-column: 2; width: min(1180px, 92%); }
+
+	.senior-sidebar {
+		grid-row: 1 / 3;
+		position: sticky;
+		top: 0;
+		height: 100vh;
+		padding: 27px 18px 22px;
+		background: linear-gradient(165deg, rgba(255,255,255,.055), transparent 42%), #123f31;
+		box-shadow: 14px 0 40px rgba(21,62,48,.11);
+		display: flex;
+		flex-direction: column;
+		z-index: 30;
+	}
+
+	.side-brand { display: flex; align-items: center; gap: 11px; padding: 0 7px 28px; color: white; text-decoration: none; }
+	.side-brand > span:last-child { display: flex; flex-direction: column; }
+	.side-brand strong { font-size: 18px; line-height: 1; }
+	.side-brand small { margin-top: 5px; color: rgba(255,255,255,.55); font-size: 9px; }
+	.side-logo { width: 44px; height: 44px; border-radius: 14px; background: #d6eb6c; color: #123f31; display: grid; place-items: center; font-size: 21px; box-shadow: 0 9px 25px rgba(0,0,0,.16); }
+
+	.side-nav { display: flex; flex-direction: column; gap: 7px; }
+	.side-nav a { min-height: 58px; padding: 10px 12px; border: 1px solid transparent; border-radius: 15px; color: rgba(255,255,255,.78); display: flex; align-items: center; gap: 12px; text-decoration: none; transition: .2s ease; }
+	.side-nav a > span { width: 31px; height: 31px; border-radius: 11px; background: rgba(255,255,255,.07); display: grid; place-items: center; font-size: 17px; }
+	.side-nav a div { display: flex; flex-direction: column; }
+	.side-nav a strong { font-size: 12px; }
+	.side-nav a small { margin-top: 3px; color: rgba(255,255,255,.44); font-size: 8px; }
+	.side-nav a:hover { transform: translateX(3px); border-color: rgba(255,255,255,.08); background: rgba(255,255,255,.08); }
+	.side-nav a.active { background: #e4efc7; color: #153f31; box-shadow: 0 12px 26px rgba(0,0,0,.14); }
+	.side-nav a.active > span { background: rgba(18,63,49,.08); }
+	.side-nav a.active small { color: #647266; }
+
+	.side-note { margin-top: auto; padding: 15px; border: 1px solid rgba(255,255,255,.1); border-radius: 17px; background: rgba(255,255,255,.07); color: white; display: flex; align-items: center; gap: 10px; }
+	.side-note > span { width: 33px; height: 33px; border-radius: 11px; background: rgba(214,235,108,.15); color: #d6eb6c; display: grid; place-items: center; }
+	.side-note div { display: flex; flex-direction: column; }
+	.side-note strong { font-size: 10px; }
+	.side-note small { margin-top: 3px; color: rgba(255,255,255,.5); font-size: 8px; }
+	.hero h1 { font-family: Georgia, "Times New Roman", serif; letter-spacing: -2.5px; }
+	.hero h1 span { font-family: Inter, ui-sans-serif, sans-serif; font-weight: 650; }
+
+	.progress-strip {
+		margin: -6px 0 26px;
+		padding: 16px 19px;
+		border: 1px solid rgba(36, 94, 69, 0.11);
+		border-radius: 20px;
+		background: rgba(255, 255, 255, 0.72);
+		box-shadow: 0 14px 45px rgba(33, 66, 52, 0.06);
+		display: grid;
+		grid-template-columns: auto minmax(180px, 1fr) auto;
+		align-items: center;
+		gap: 20px;
+	}
+
+	.progress-copy { display: flex; align-items: center; gap: 11px; min-width: 230px; }
+	.progress-copy > div { display: flex; flex-direction: column; gap: 3px; }
+	.progress-copy strong { color: #163f31; font-size: 13px; }
+	.progress-copy small { color: #748179; font-size: 10px; }
+	.progress-icon { width: 36px; height: 36px; border-radius: 12px; background: #dff0a4; color: #205b40; display: grid; place-items: center; font-weight: 900; }
+	.progress-meter { height: 9px; border-radius: 999px; background: #e7ece5; overflow: hidden; }
+	.progress-meter span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #126b49, #b9d947); transition: width .25s ease; }
+	.progress-value { color: #14523a; font-size: 14px; }
+
+	.quick-grid button,
+	.reminder-card,
+	.summary-card {
+		border-color: rgba(32, 83, 63, 0.12);
+		background: rgba(255, 255, 255, 0.76);
+		box-shadow: 0 18px 60px rgba(24, 62, 47, 0.07);
+	}
+
+	.quick-grid button { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+	.quick-grid button:hover { transform: translateY(-3px); border-color: rgba(18, 107, 73, 0.34); box-shadow: 0 18px 35px rgba(24, 62, 47, 0.12); }
+
+	.filter-row {
+		display: flex;
+		gap: 8px;
+		margin: 18px 0 6px;
+		padding-top: 17px;
+		border-top: 1px solid rgba(25, 82, 61, 0.1);
+	}
+
+	.filter-row button {
+		padding: 9px 12px;
+		border: 1px solid transparent;
+		border-radius: 12px;
+		background: #edf1eb;
+		color: #617067;
+		font-size: 10px;
+		font-weight: 800;
+	}
+
+	.filter-row button span { margin-left: 5px; opacity: .72; }
+	.filter-row button.active { border-color: rgba(18, 85, 59, .16); background: #dfecc9; color: #174d38; }
+	.timeline-row { border-radius: 16px; padding-inline: 12px; transition: background .2s ease, transform .2s ease; }
+	.timeline-row:hover { background: #f6f8f3; transform: translateX(3px); }
+
+	@media (max-width: 820px) {
+		.page { display: block; }
+		.senior-sidebar { display: none; }
+		.topbar { padding-inline: 20px; }
+		.progress-strip { grid-template-columns: 1fr auto; }
+		.progress-meter { grid-column: 1 / -1; grid-row: 2; }
 	}
 </style>

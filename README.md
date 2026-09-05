@@ -1,4 +1,3 @@
-
 #  Vcare.life 💚
 They cared for us. Now we care for them.
 ## 👥 Team Members
@@ -23,7 +22,7 @@ An interactive Web App which voice call elderly members and ask regular health a
 * Frontend: TypeScript with SvelteKit (Static Adapter) and UnoCSS
 * Backend:  Python with FastAPI
 * Database & Storage: Supabase 
-* Deployment & Cloud: Vercel,Blend AI & Twilio
+* Deployment & Cloud: Vercel,Bland AI & Twilio
 
 
 # 🔄 How Vcare Works
@@ -136,15 +135,7 @@ cd august hackethon
 
 ---
 
-   # For Backend setups
-   cd backend && pip install -r requirements.txt
-   python main.py
-   # For Frontend setups
-   cd ../frontend && npm install
-   npm run dev
    
    
 ------------------------------
-> ## NOTE:
 
-> We ran into trouble initially we had 5 members but in mid one of our teamate left it cuz they said they can't do it(they barely did smtg) and we had to take in replacement cz we were actually running low on time as compared to work was pending in our project, we removed that teamate from collabrotor but it's name still mentioned as contributer make it total 6 ppl on git hub. So for the success of the this final product only 5 Team members have worked on it as mentioned in this file. We hope you will understand.

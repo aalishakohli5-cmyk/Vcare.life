@@ -22,6 +22,10 @@
       src="/grandma.jpg"
       alt="Senior woman happily talking on the phone"
       class="hero-image"
+      width="1536"
+      height="1024"
+      decoding="async"
+      fetchpriority="high"
     />
 
     <div class="hero-overlay"></div>
@@ -596,7 +600,7 @@
   position: relative;
   z-index: 3;
   width: 100%;
-  max-width: 650px;
+  max-width: 760px;
 }
 
 
@@ -608,7 +612,7 @@
 
     text-align: center;
 
-    font-size: 11px;
+    font-size: 13px;
 
     /* Medium weight — eyebrow, not headline */
     font-weight: 500;
@@ -628,7 +632,7 @@ h2 {
     Georgia,
     serif;
 
-  font-size: clamp(52px, 4.5vw, 72px);
+  font-size: clamp(60px, 5.2vw, 88px);
   line-height: 0.98;
   font-weight: 500;
   letter-spacing: -0.03em;
@@ -647,14 +651,14 @@ h2 span {
 
 
   .intro {
-    max-width: 500px;
+	max-width: 620px;
 
     margin:
       23px auto 0;
 
     text-align: center;
 
-    font-size: 14px;
+	font-size: 17px;
 
     line-height: 1.65;
 
@@ -675,7 +679,7 @@ h2 span {
 
     text-align: center;
 
-    font-size: 17px;
+    font-size: 21px;
 
     font-weight: 750;
 
@@ -691,7 +695,7 @@ h2 span {
 
     text-align: center;
 
-    font-size: 11px;
+    font-size: 14px;
 
     color: #7b8882;
   }
@@ -705,7 +709,7 @@ h2 span {
 
   margin-bottom: 16px;
 
-  padding: 22px 24px;
+  padding: 22px 28px 22px 24px;
 
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -713,7 +717,14 @@ h2 span {
   align-items: center;
   gap: 18px;
 
+  border: 1px solid #dfe6e1;
+  border-left-width: 6px;
   border-radius: 22px;
+
+  background: rgba(255, 255, 255, 0.96);
+
+  box-shadow:
+    0 8px 24px rgba(35, 70, 55, 0.06);
 
   text-decoration: none;
   color: #173d32;
@@ -734,6 +745,7 @@ h2 span {
     border-left: 4px solid #4e9e72;  /* green accent */
 
     box-shadow: 0 2px 12px rgba(78, 158, 114, 0.07);
+    border-left-color: #58a878;
   }
 
 
@@ -744,6 +756,7 @@ h2 span {
     border-left: 4px solid #d4943a;  /* amber accent */
 
     box-shadow: 0 2px 12px rgba(212, 148, 58, 0.07);
+    border-left-color: #dc9b38;
   }
 
 
@@ -760,12 +773,16 @@ h2 span {
   .caregiver:hover {
     border-left-color: #3b845c;
     box-shadow: 0 17px 38px rgba(78, 158, 114, 0.14);
+    border-color: #b9d8c3;
+    border-left-color: #32865a;
   }
 
 
   .senior:hover {
     border-left-color: #b87a28;
     box-shadow: 0 17px 38px rgba(212, 148, 58, 0.14);
+    border-color: #ead5ae;
+    border-left-color: #bd7620;
   }
 
 
@@ -776,9 +793,9 @@ h2 span {
   display: grid;
   place-items: center;
 
-  border-radius: 16px;
+  border-radius: 0;
 
-  background: rgba(255, 255, 255, 0.82);
+  background: transparent;
 
   font-size: 25px;
 }
@@ -801,7 +818,7 @@ h2 span {
   .role-main {
     margin-bottom: 3px;
 
-    font-size: 10px;
+    font-size: 13px;
 
     font-weight: 650;
 
@@ -810,7 +827,7 @@ h2 span {
 
 
   .role-copy strong {
-    font-size: 15px;
+    font-size: 19px;
   }
 
 
@@ -820,7 +837,7 @@ h2 span {
       0
       0;
 
-    font-size: 11px;
+    font-size: 14px;
 
     line-height: 1.4;
 
@@ -841,6 +858,7 @@ h2 span {
     /* Base — overridden per-card below */
     background:
       rgba(38, 106, 77, 0.07);
+    background: #ebf4ee;
 
     font-size: 20px;
 
@@ -857,6 +875,18 @@ h2 span {
   .senior .arrow {
     background: rgba(212, 148, 58, 0.13);  /* soft amber */
     color: #9c6b1e;
+  }
+
+
+  .senior .arrow {
+    background: #fbf1e2;
+    color: #9b651e;
+  }
+
+
+  .role-card:focus-visible {
+    outline: 3px solid #2d7a57;
+    outline-offset: 4px;
   }
 
 
@@ -1092,12 +1122,12 @@ h2 span {
 
 
     h2 {
-      font-size: 41px;
+      font-size: 48px;
     }
 
 
     .intro {
-      font-size: 13px;
+      font-size: 15px;
     }
 
 
@@ -1121,12 +1151,12 @@ h2 span {
 
 
     .role-copy strong {
-      font-size: 13px;
+      font-size: 16px;
     }
 
 
     .role-copy p {
-      font-size: 10px;
+      font-size: 13px;
     }
 
   }

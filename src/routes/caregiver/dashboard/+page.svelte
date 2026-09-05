@@ -1,9 +1,16 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
+	import {
+		careInviteErrorMessage,
+		chooseCareRecipient,
+		normalizeCareInviteCode,
+		rememberCareRecipient
+	} from '$lib/careConnections';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import Badge from '$lib/components/Badge.svelte';
+	import '../theme.css';
 
 	/* =====================================================
 	   USER / SENIOR
@@ -11,6 +18,13 @@
 
 	let caregiverName = $state('Caregiver');
 	let caregiverInitial = $state('C');
+	/** @type {any[]} */
+	let linkedSeniors = $state([]);
+	let inviteCode = $state('');
+	let connectionRelationship = $state('');
+	let connecting = $state(false);
+	/** @type {{ type: 'success' | 'error', text: string } | null} */
+	let connectionMessage = $state(null);
 
 	let senior = $state({
 		name: 'Loading...',
@@ -61,12 +75,14 @@
 	   MEDICATIONS
 	===================================================== */
 
+	/** @type {any[]} */
 	let medications = $state([]);
 
 	/* =====================================================
 	   ALERTS
 	===================================================== */
 
+	/** @type {any[]} */
 	let alerts = $state([]);
 
 	/* =====================================================
@@ -82,6 +98,8 @@
 	});
 
 	let seniorId = $state('');
+	/** @type {ReturnType<typeof setInterval> | undefined} */
+	let clock;
 
 	/* =====================================================
 	   AUTH + PROFILE
@@ -90,7 +108,7 @@
 	onMount(async () => {
 		updateClock();
 
-		const clock = setInterval(updateClock, 30000);
+		clock = setInterval(updateClock, 30000);
 
 		const {
 			data: { session }
@@ -134,43 +152,18 @@
 					}
 				}
 
-				// Fallback to caregiver profile's emergency contact info if no links table entry exists yet
-				if ((!seniors || seniors.length === 0) && profile?.emergency_contact_name) {
-					if (profile.emergency_contact_phone) {
-						try {
-							const { data: matched } = await supabase
-								.from('profiles')
-								.select('*')
-								.eq('phone', profile.emergency_contact_phone)
-								.maybeSingle();
-							if (matched) {
-								seniors = [matched];
-							}
-						} catch (e) {
-							console.warn('Matching senior by phone error:', e);
-						}
-					}
-
-					if (!seniors || seniors.length === 0) {
-						seniors = [{
-							id: user.id,
-							full_name: profile.emergency_contact_name,
-							phone: profile.emergency_contact_phone || '',
-							role: 'senior'
-						}];
-					}
-				}
 			} catch (err) {
 				console.error('Supabase direct senior query error:', err);
 			}
 
 			if (seniors && seniors.length > 0) {
-				const firstSenior = seniors[0];
+				linkedSeniors = seniors;
+				const firstSenior = chooseCareRecipient(seniors);
 				senior.name = firstSenior.full_name || 'Senior';
 				senior.firstName = (firstSenior.full_name || 'Senior').split(' ')[0];
 				senior.initials = (firstSenior.full_name || 'S')
 					.split(' ')
-					.map(n => n.charAt(0))
+					.map(/** @param {string} n */ (n) => n.charAt(0))
 					.join('')
 					.toUpperCase();
 				senior.phone = firstSenior.phone || '';
@@ -256,10 +249,10 @@
 					fetch(`${PUBLIC_BACKEND_URL}/caregiver/${user.id}/seniors`, {
 						headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
 						signal: controller.signal
-					}).then(res => res.ok ? res.json() : []).then(backendSeniors => {
+					}).then(res => res.ok ? res.json() : []).then(/** @param {any[]} backendSeniors */ (backendSeniors) => {
 						clearTimeout(timeoutId);
 						if (backendSeniors && backendSeniors.length > 0) {
-							const bs = backendSeniors[0];
+							const bs = backendSeniors.find(person => person.id === seniorId) || backendSeniors[0];
 							senior.name = bs.full_name || senior.name;
 							senior.firstName = (bs.full_name || senior.name).split(' ')[0];
 							senior.phone = bs.phone || senior.phone;
@@ -322,7 +315,10 @@
 			}
 		}
 
-		return () => clearInterval(clock);
+	});
+
+	onDestroy(() => {
+		if (clock) clearInterval(clock);
 	});
 
 	/* =====================================================
@@ -345,6 +341,42 @@
 	function openSenior() {
 		goto('/caregiver/senior');
 	}
+
+	/** @param {Event & { currentTarget: HTMLSelectElement }} event */
+	function switchSenior(event) {
+		rememberCareRecipient(event.currentTarget.value);
+		window.location.reload();
+	}
+
+	async function connectWithCode() {
+		connectionMessage = null;
+		const code = normalizeCareInviteCode(inviteCode);
+		if (!/^VCARE-[A-Z0-9]{6}$/.test(code)) {
+			connectionMessage = { type: 'error', text: 'Enter the complete code, for example VCARE-ABC123.' };
+			return;
+		}
+
+		connecting = true;
+		const { data, error } = await supabase.rpc('redeem_care_invite', {
+			invite_code: code,
+			relationship_to_senior: connectionRelationship.trim() || null
+		});
+		connecting = false;
+
+		if (error || !data?.[0]?.senior_id) {
+			connectionMessage = {
+				type: 'error',
+				text: careInviteErrorMessage(error, 'redeem')
+			};
+			return;
+		}
+
+		rememberCareRecipient(data[0].senior_id);
+		connectionMessage = { type: 'success', text: `Connected to ${data[0].senior_name}.` };
+		inviteCode = '';
+		connectionRelationship = '';
+		setTimeout(() => window.location.reload(), 700);
+	}
 </script>
 
 <svelte:head>
@@ -358,6 +390,8 @@
 </svelte:head>
 
 <div class="app">
+
+<div class="app" data-caregiver-portal>
 
 	<!-- =====================================================
 	     SIDEBAR
@@ -414,12 +448,21 @@
 				</span>
 				<span>Senior Profile</span>
 			</a>
+
+			<a href="/caregiver/settings" class="nav-item">
+				<span class="nav-icon">⚙</span>
+				<span>Settings</span>
+			</a>
+
 		</nav>
 
 		<div class="sidebar-bottom">
 			<a href="/caregiver/senior" class="mini-senior">
 				<div class="mini-avatar">
 					{senior.initials}
+
+				<div class="mini-avatar" aria-hidden="true">
+					♡
 				</div>
 				<div class="mini-senior-info">
 					<small>CARING FOR</small>
@@ -490,10 +533,18 @@
 			<div class="senior-main">
 				<div class="senior-avatar">
 					{senior.initials}
+
+				<div class="senior-avatar" aria-hidden="true">
+					♡
 				</div>
 
 				<div class="senior-info">
 					<p class="eyebrow">YOUR SENIOR</p>
+
+					<p class="eyebrow">
+						CARE RECIPIENT
+					</p>
+
 					<div class="senior-name-row">
 						<!-- Sans-serif headline for data consistency -->
 						<h2>{senior.name}</h2>
@@ -509,6 +560,15 @@
 						Last Vcare check-in:
 						<strong>{senior.lastCheckIn}</strong>
 					</p>
+
+					<a
+						href="/caregiver/senior"
+						class="senior-details-link"
+						aria-label={`Review or correct ${senior.name}'s care details`}
+					>
+						Review or correct details →
+					</a>
+
 				</div>
 			</div>
 
@@ -534,6 +594,50 @@
 				</a>
 			</div>
 		</section>
+
+		<section class="connection-panel" aria-labelledby="connection-title">
+			<div>
+				<p class="eyebrow">CARE CONNECTIONS</p>
+				<h2 id="connection-title">Connect with an invitation code</h2>
+				<p>A senior generates this private, one-time code from their Care Circle.</p>
+			</div>
+
+			{#if linkedSeniors.length > 1}
+				<label class="senior-selector">
+					<span>Currently viewing</span>
+					<select value={seniorId} onchange={switchSenior}>
+						{#each linkedSeniors as person}
+							<option value={person.id}>{person.full_name || 'Senior'}</option>
+						{/each}
+					</select>
+				</label>
+			{/if}
+
+			<form class="connection-form" onsubmit={(event) => { event.preventDefault(); connectWithCode(); }}>
+				<label for="connection-relationship">Your relationship to the senior</label>
+				<input id="connection-relationship" bind:value={connectionRelationship} placeholder="e.g. Daughter, neighbour" autocomplete="off" />
+				<label for="invite-code">Invitation code</label>
+				<div>
+					<input
+						id="invite-code"
+						bind:value={inviteCode}
+						placeholder="VCARE-ABC123"
+						autocomplete="one-time-code"
+						spellcheck="false"
+						maxlength="12"
+						required
+					/>
+					<button type="submit" disabled={connecting}>{connecting ? 'Connecting…' : 'Connect'}</button>
+				</div>
+			</form>
+
+			{#if connectionMessage}
+				<p class:connection-success={connectionMessage.type === 'success'} class:connection-error={connectionMessage.type === 'error'} role="status">
+					{connectionMessage.text}
+				</p>
+			{/if}
+		</section>
+
 
 		<!-- =================================================
 		     MAIN GRID

@@ -2,9 +2,11 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
+	import { chooseCareRecipient } from '$lib/careConnections';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import Badge from '$lib/components/Badge.svelte';
 	import MetricCard from '$lib/components/MetricCard.svelte';
+	import '../theme.css';
 
 	/* =====================================================
 	   STATE
@@ -108,37 +110,12 @@
 				}
 			}
 
-			if ((!seniors || seniors.length === 0) && profile?.emergency_contact_name) {
-				if (profile.emergency_contact_phone) {
-					try {
-						const { data: matched } = await supabase
-							.from('profiles')
-							.select('*')
-							.eq('phone', profile.emergency_contact_phone)
-							.maybeSingle();
-						if (matched) {
-							seniors = [matched];
-						}
-					} catch (e) {
-						console.warn('Matching senior by phone error:', e);
-					}
-				}
-
-				if (!seniors || seniors.length === 0) {
-					seniors = [{
-						id: user.id,
-						full_name: profile.emergency_contact_name,
-						phone: profile.emergency_contact_phone || '',
-						role: 'senior'
-					}];
-				}
-			}
 		} catch (err) {
 			console.error('Supabase direct senior query error:', err);
 		}
 
 		if (seniors && seniors.length > 0) {
-			const firstSenior = seniors[0];
+			const firstSenior = chooseCareRecipient(seniors);
 			senior.id = firstSenior.id;
 			senior.name = firstSenior.full_name || 'Senior';
 			senior.firstName = (firstSenior.full_name || 'Senior').split(' ')[0];
@@ -501,7 +478,7 @@
 	/>
 </svelte:head>
 
-<div class="app">
+<div class="app" data-caregiver-portal>
 
 	<!-- SIDEBAR -->
 	<aside class="sidebar">
@@ -544,11 +521,15 @@
 				</span>
 				<span>Senior Profile</span>
 			</a>
+			<a href="/caregiver/settings" class="nav-item">
+				<span class="nav-icon">⚙</span>
+				<span>Settings</span>
+			</a>
 		</nav>
 
 		<div class="sidebar-bottom">
 			<a href="/caregiver/senior" class="mini-senior">
-				<div class="mini-avatar">{senior.initials}</div>
+				<div class="mini-avatar" aria-hidden="true">♡</div>
 				<div>
 					<small>CARING FOR</small>
 					<strong>{senior.name}</strong>
@@ -720,18 +701,20 @@
 
 <!-- ADD ROUTINE ITEM MODAL -->
 {#if showAddModal}
-	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showAddModal = false; }} role="dialog" aria-modal="true" tabindex="-1">
-		<div class="modal-card">
+	<div class="modal-overlay">
+		<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="add-medicine-title">
 			<header class="modal-header">
 				<div>
 					<p class="eyebrow">NEW ROUTINE ITEM</p>
 					<h2>Add Routine for {senior.firstName}</h2>
+					<p class="eyebrow">NEW PRESCRIPTION</p>
+					<h2 id="add-medicine-title">Add Medicine for {senior.firstName}</h2>
 				</div>
-				<button class="modal-close" onclick={() => showAddModal = false}>×</button>
+				<button type="button" class="modal-close" onclick={() => showAddModal = false} aria-label="Close add medicine form">×</button>
 			</header>
 
 			{#if addError}
-				<div class="modal-error">{addError}</div>
+				<div class="modal-error" role="alert">{addError}</div>
 			{/if}
 
 			<form onsubmit={(e) => { e.preventDefault(); addMedication(); }}>

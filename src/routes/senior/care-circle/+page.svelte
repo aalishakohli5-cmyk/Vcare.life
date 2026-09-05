@@ -1,66 +1,129 @@
 <script>
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { supabase } from '$lib/supabase';
+	import { careInviteErrorMessage } from '$lib/careConnections';
 
-	let caregivers = $state([
-		{
-			id: 1,
-			name: 'Monica',
-			relation: 'Primary caregiver',
-			phone: '+91 98765 43210',
-			initial: 'M',
-			primary: true
-		},
-		{
-			id: 2,
-			name: 'Rahul',
-			relation: 'Son',
-			phone: '+91 91234 56789',
-			initial: 'R',
-			primary: false
+	/** @type {Array<{linkId: number, id: string, name: string, relation: string, phone: string, initial: string, primary: boolean}>} */
+	let caregivers = $state([]);
+	let loading = $state(true);
+	let formError = $state('');
+	let inviteCode = $state('');
+	let inviteExpiresAt = $state('');
+	let generating = $state(false);
+	let copyLabel = $state('Copy code');
+
+	onMount(loadCareCircle);
+
+	async function loadCareCircle() {
+		loading = true;
+		formError = '';
+
+		const { data: { user } } = await supabase.auth.getUser();
+		if (!user) {
+			goto('/auth?role=senior');
+			return;
 		}
-	]);
 
-	let showAddForm = $state(false);
-	let name = $state('');
-	let relation = $state('');
-	let phone = $state('');
+		const { data: links, error: linksError } = await supabase
+			.from('caregiver_links')
+			.select('id, caregiver_id, relationship, created_at')
+			.eq('senior_id', user.id)
+			.order('created_at', { ascending: true });
+
+		if (linksError) {
+			formError = 'We could not load your Care Circle. Please try again.';
+			loading = false;
+			return;
+		}
+
+		const caregiverIds = (links || []).map((link) => link.caregiver_id);
+		if (caregiverIds.length === 0) {
+			caregivers = [];
+			loading = false;
+			return;
+		}
+
+		const { data: profiles, error: profilesError } = await supabase
+			.from('profiles')
+			.select('id, full_name, phone')
+			.in('id', caregiverIds);
+
+		if (profilesError) {
+			formError = 'We found your connections but could not load their profiles.';
+			loading = false;
+			return;
+		}
+
+		caregivers = (links || []).map((link) => {
+			const profile = (profiles || []).find((person) => person.id === link.caregiver_id);
+			const displayName = profile?.full_name || 'Caregiver';
+			return {
+				linkId: link.id,
+				id: link.caregiver_id,
+				name: displayName,
+				relation: link.relationship || 'Trusted caregiver',
+				phone: profile?.phone || '',
+				initial: displayName.charAt(0).toUpperCase(),
+				primary: false
+			};
+		});
+
+		loading = false;
+	}
 
 	function goBack() {
 		goto('/senior/dashboard');
 	}
 
-	function addCaregiver() {
-		if (!name.trim() || !relation.trim()) return;
+	async function generateInvite() {
+		generating = true;
+		formError = '';
+		copyLabel = 'Copy code';
 
-		caregivers = [
-			...caregivers,
-			{
-				id: Date.now(),
-				name: name.trim(),
-				relation: relation.trim(),
-				phone: phone.trim(),
-				initial: name.trim().charAt(0).toUpperCase(),
-				primary: caregivers.length === 0
-			}
-		];
+		const { data, error } = await supabase.rpc('generate_care_invite');
+		generating = false;
 
-		name = '';
-		relation = '';
-		phone = '';
-		showAddForm = false;
+		if (error || !data?.[0]?.code) {
+			formError = careInviteErrorMessage(error, 'generate');
+			return;
+		}
+
+		inviteCode = data[0].code;
+		inviteExpiresAt = data[0].expires_at;
 	}
 
-	function removeCaregiver(id) {
-		caregivers = caregivers.filter(
-			(caregiver) => caregiver.id !== id
-		);
+	async function copyInvite() {
+		if (!inviteCode) return;
+		try {
+			await navigator.clipboard.writeText(inviteCode);
+			copyLabel = 'Copied!';
+		} catch {
+			formError = 'Copying was blocked. Select the code and copy it manually.';
+		}
 	}
 
-	function makePrimary(id) {
-		caregivers = caregivers.map((caregiver) => ({
-			...caregiver,
-			primary: caregiver.id === id
-		}));
+	/** @param {string} value */
+	function inviteExpiryLabel(value) {
+		if (!value) return '';
+		return new Intl.DateTimeFormat(undefined, {
+			hour: 'numeric',
+			minute: '2-digit',
+			timeZoneName: 'short'
+		}).format(new Date(value));
+	}
+
+	/** @param {number} linkId @param {string} name */
+	async function removeCaregiver(linkId, name) {
+		if (!window.confirm(`Remove ${name} from your Care Circle?`)) return;
+
+		const { error } = await supabase.from('caregiver_links').delete().eq('id', linkId);
+		if (error) {
+			formError = 'This caregiver could not be removed. Please try again.';
+			return;
+		}
+
+		caregivers = caregivers.filter((caregiver) => caregiver.linkId !== linkId);
 	}
 </script>
 
@@ -69,30 +132,6 @@
 </svelte:head>
 
 <div class="page">
-
-	<header class="topbar">
-
-		<button class="brand" onclick={goBack}>
-			<div class="logo">♥</div>
-
-			<div class="brand-copy">
-				<strong>Vcare.life</strong>
-				<span>A Voice That Cares</span>
-			</div>
-		</button>
-
-		<div class="profile">
-			<div class="avatar">A</div>
-
-			<div>
-				<strong>Aalisha</strong>
-				<span>My care circle</span>
-			</div>
-		</div>
-
-	</header>
-
-
 	<main class="content">
 
 		<!-- HERO -->
@@ -183,18 +222,18 @@
 
 				<button
 					class="add-button"
-					onclick={() =>
-						(showAddForm = !showAddForm)}
+					onclick={generateInvite}
+					disabled={generating}
 				>
-					＋ Add person
+					{generating ? 'Creating code…' : '＋ Invite caregiver'}
 				</button>
 
 			</div>
 
 
-			{#if showAddForm}
+			{#if inviteCode}
 
-				<div class="add-panel">
+				<section class="add-panel invite-panel" aria-labelledby="invite-heading">
 
 					<div class="form-heading">
 
@@ -203,82 +242,41 @@
 						</div>
 
 						<div>
-							<strong>
-								Add someone you trust
-							</strong>
+							<strong id="invite-heading">Share this one-time code</strong>
 
 							<p>
-								They’ll become part of your Care Circle.
+								Your caregiver enters it on their dashboard. It expires at {inviteExpiryLabel(inviteExpiresAt)}.
 							</p>
 						</div>
 
 					</div>
 
 
-					<div class="form-grid">
-
-						<label>
-							<span>Name</span>
-
-							<input
-								type="text"
-								placeholder="e.g. Monica"
-								bind:value={name}
-							/>
-						</label>
-
-
-						<label>
-							<span>Relationship</span>
-
-							<input
-								type="text"
-								placeholder="e.g. Daughter"
-								bind:value={relation}
-							/>
-						</label>
-
-
-						<label>
-							<span>Phone</span>
-
-							<input
-								type="text"
-								placeholder="+91..."
-								bind:value={phone}
-							/>
-						</label>
-
-					</div>
+					<div class="invite-code" aria-label={`Invitation code ${inviteCode}`}>{inviteCode}</div>
 
 
 					<div class="form-actions">
 
-						<button
-							class="cancel-button"
-							onclick={() =>
-								(showAddForm = false)}
-						>
-							Cancel
-						</button>
-
-						<button
-							class="save-button"
-							onclick={addCaregiver}
-						>
-							Add to Care Circle →
-						</button>
+						<button type="button" class="cancel-button" onclick={() => (inviteCode = '')}>Close</button>
+						<button type="button" class="save-button" onclick={copyInvite}>{copyLabel}</button>
 
 					</div>
 
-				</div>
+				</section>
 
 			{/if}
 
 
 			<!-- CAREGIVERS -->
 
-			<div class="caregiver-list">
+			{#if formError}
+				<p class="form-error" role="alert">{formError}</p>
+			{/if}
+
+			<div class="caregiver-list" aria-live="polite">
+				{#if loading}
+					<p class="loading-copy">Loading your trusted people…</p>
+				{/if}
 
 				{#each caregivers as caregiver}
 
@@ -329,19 +327,6 @@
 
 						<div class="caregiver-actions">
 
-							{#if !caregiver.primary}
-
-								<button
-									class="primary-button"
-									onclick={() =>
-										makePrimary(caregiver.id)}
-								>
-									Make primary
-								</button>
-
-							{/if}
-
-
 							{#if caregiver.phone}
 
 								<a
@@ -357,9 +342,8 @@
 
 							<button
 								class="remove-button"
-								onclick={() =>
-									removeCaregiver(caregiver.id)}
-								aria-label="Remove caregiver"
+								onclick={() => removeCaregiver(caregiver.linkId, caregiver.name)}
+								aria-label={`Remove ${caregiver.name} from your Care Circle`}
 							>
 								×
 							</button>
@@ -373,7 +357,7 @@
 			</div>
 
 
-			{#if caregivers.length === 0}
+			{#if !loading && caregivers.length === 0}
 
 				<div class="empty-state">
 
@@ -390,11 +374,8 @@
 						them close when you need support.
 					</p>
 
-					<button
-						onclick={() =>
-							(showAddForm = true)}
-					>
-						＋ Add your first person
+					<button onclick={generateInvite} disabled={generating}>
+						{generating ? 'Creating code…' : '＋ Invite your first caregiver'}
 					</button>
 
 				</div>
@@ -422,46 +403,6 @@
 					<p>
 						Call someone in your Care Circle whenever
 						you need them.
-					</p>
-				</div>
-
-			</div>
-
-
-			<div class="mini-card">
-
-				<div class="mini-icon">
-					♡
-				</div>
-
-				<div>
-					<strong>
-						People you choose
-					</strong>
-
-					<p>
-						Your Care Circle is made only of people
-						you trust.
-					</p>
-				</div>
-
-			</div>
-
-
-			<div class="mini-card">
-
-				<div class="mini-icon">
-					!
-				</div>
-
-				<div>
-					<strong>
-						Support when needed
-					</strong>
-
-					<p>
-						Vcare can surface important moments that
-						may need attention.
 					</p>
 				</div>
 
@@ -1112,6 +1053,17 @@
 		gap: 8px;
 	}
 
+	.form-error {
+		margin: 14px 0 0;
+		padding: 11px 13px;
+		border: 1px solid #efc6bd;
+		border-radius: 12px;
+		background: #fff1ed;
+		color: #9b2f24;
+		font-size: 13px;
+		font-weight: 700;
+	}
+
 
 	.cancel-button,
 	.save-button {
@@ -1415,9 +1367,8 @@
 		margin-top: 17px;
 
 		display: grid;
-
-		grid-template-columns:
-			repeat(3, 1fr);
+		grid-template-columns: minmax(0, 640px);
+		justify-content: center;
 
 		gap: 11px;
 	}
@@ -1560,4 +1511,43 @@
 			grid-template-columns: 1fr;
 		}
 	}
+
+	/* Unified senior navigation and modern page shell */
+	:global(body) { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f5ef; }
+	.page { display: grid; grid-template-columns: 250px minmax(0,1fr); grid-template-rows: auto 1fr; background: radial-gradient(circle at 86% 5%, rgba(203,230,99,.22), transparent 28%), linear-gradient(180deg,#f8faf5 0%,#f1f4ed 100%); }
+	.topbar { grid-column: 2; height: 82px; justify-content: flex-end; border-color: rgba(25,82,61,.1); background: rgba(250,252,247,.88); backdrop-filter: blur(18px); }
+	.content { grid-column: 2; width: min(1180px,92%); }
+	.hero h1 { font-family: Georgia, "Times New Roman", serif; letter-spacing: -2.5px; }
+	.hero h1 span { font-family: Inter, ui-sans-serif, sans-serif; font-weight: 650; }
+	.care-strip, .care-card, .summary-card, .mini-card { border-color: rgba(32,83,63,.11); background: rgba(255,255,255,.78); box-shadow: 0 18px 56px rgba(24,62,47,.07); }
+	.caregiver-row { border-radius: 16px; padding-inline: 14px; transition: background .2s ease, transform .2s ease; }
+	.caregiver-row:hover { background: #f5f8f2; transform: translateX(3px); }
+	.invite-panel { border: 1px solid #cfe2d8; background: linear-gradient(135deg,#f4fbf7,#edf7f1); }
+	.invite-code { margin: 20px 0; padding: 18px; border: 2px dashed #6ca88b; border-radius: 16px; background: white; color: #124b38; font-size: clamp(25px,3vw,38px); font-weight: 900; letter-spacing: .12em; text-align: center; }
+	.loading-copy { padding: 24px 12px; color: #63756d; font-weight: 700; }
+	.add-button:disabled, .empty-state button:disabled { opacity: .65; cursor: wait; }
+
+	.senior-sidebar { grid-row: 1 / 3; position: sticky; top: 0; height: 100vh; padding: 27px 18px 22px; background: linear-gradient(165deg,rgba(255,255,255,.055),transparent 42%),#123f31; box-shadow: 14px 0 40px rgba(21,62,48,.11); display: flex; flex-direction: column; z-index: 30; }
+	.side-brand { display: flex; align-items: center; gap: 11px; padding: 0 7px 28px; color: white; text-decoration: none; }
+	.side-brand > span:last-child { display: flex; flex-direction: column; }
+	.side-brand strong { font-size: 18px; line-height: 1; }
+	.side-brand small { margin-top: 5px; color: rgba(255,255,255,.55); font-size: 9px; }
+	.side-logo { width: 44px; height: 44px; border-radius: 14px; background: #d6eb6c; color: #123f31; display: grid; place-items: center; font-size: 21px; box-shadow: 0 9px 25px rgba(0,0,0,.16); }
+	.side-nav { display: flex; flex-direction: column; gap: 7px; }
+	.side-nav a { min-height: 58px; padding: 10px 12px; border: 1px solid transparent; border-radius: 15px; color: rgba(255,255,255,.78); display: flex; align-items: center; gap: 12px; text-decoration: none; transition: .2s ease; }
+	.side-nav a > span { width: 31px; height: 31px; border-radius: 11px; background: rgba(255,255,255,.07); display: grid; place-items: center; font-size: 17px; }
+	.side-nav a div { display: flex; flex-direction: column; }
+	.side-nav a strong { font-size: 12px; }
+	.side-nav a small { margin-top: 3px; color: rgba(255,255,255,.44); font-size: 8px; }
+	.side-nav a:hover { transform: translateX(3px); border-color: rgba(255,255,255,.08); background: rgba(255,255,255,.08); }
+	.side-nav a.active { background: #e4efc7; color: #153f31; box-shadow: 0 12px 26px rgba(0,0,0,.14); }
+	.side-nav a.active > span { background: rgba(18,63,49,.08); }
+	.side-nav a.active small { color: #647266; }
+	.side-note { margin-top: auto; padding: 15px; border: 1px solid rgba(255,255,255,.1); border-radius: 17px; background: rgba(255,255,255,.07); color: white; display: flex; align-items: center; gap: 10px; }
+	.side-note > span { width: 33px; height: 33px; border-radius: 11px; background: rgba(214,235,108,.15); color: #d6eb6c; display: grid; place-items: center; }
+	.side-note div { display: flex; flex-direction: column; }
+	.side-note strong { font-size: 10px; }
+	.side-note small { margin-top: 3px; color: rgba(255,255,255,.5); font-size: 8px; }
+
+	@media (max-width: 820px) { .page { display:block; } .senior-sidebar { display:none; } .topbar { padding-inline:20px; } .invite-code { letter-spacing:.06em; } }
 </style>
