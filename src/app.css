@@ -1,0 +1,116 @@
+/* =====================================================
+   VCARE.LIFE — GLOBAL DESIGN SYSTEM & TOKENS
+===================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..500&family=Public+Sans:ital,wght@0,300..800;1,300..800&display=swap');
+
+:root {
+	/* --------------------------------------------------
+	   1. TYPOGRAPHY
+	-------------------------------------------------- */
+	--font-display: 'Fraunces', Georgia, serif;
+	--font-body: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+	/* --------------------------------------------------
+	   2. BRAND PALETTE
+	-------------------------------------------------- */
+	--color-brand-darkest: #07281d;
+	--color-brand-dark: #0d3827;
+	--color-brand-primary: #116240;
+	--color-brand-medium: #17754b;
+	--color-brand-light: #2c9a59;
+	--color-brand-accent: #dce76a;
+	--color-brand-accent-hover: #e8f37b;
+	--color-brand-accent-soft: #f4faab;
+
+	/* --------------------------------------------------
+	   3. BACKGROUNDS & SURFACES
+	-------------------------------------------------- */
+	--color-bg: #f8f6f0;
+	--color-surface: #ffffff;
+	--color-surface-soft: #fbfdfb;
+	--color-surface-tinted: #f4f7f2;
+	--color-border: #e2e8e0;
+	--color-border-subtle: #edf2eb;
+
+	/* --------------------------------------------------
+	   4. TEXT & CONTRAST (WCAG AA ≥ 4.5:1 on light backgrounds)
+	-------------------------------------------------- */
+	--color-text-primary: #153d30;
+	--color-text-body: #1e293b;
+	--color-text-secondary: #475569;   /* High-contrast mid-slate (≥ 4.5:1 on cream/white) */
+	--color-text-subtle: #4b6357;      /* Rich mid-green slate (≥ 4.5:1 on cream/white) */
+	--color-text-muted: #64748b;
+	--color-text-inverse: #ffffff;
+
+	/* --------------------------------------------------
+	   5. SEMANTIC TOKENS
+	-------------------------------------------------- */
+	/* Success / Taken / Normal */
+	--color-success-bg: #e8f7ee;
+	--color-success-text: #0f6e3c;
+	--color-success-border: #b7e8ca;
+	--color-success-icon-bg: #dcfce7;
+	--color-success-icon: #15803d;
+
+	/* Warning / Pending */
+	--color-warning-bg: #fef4e2;
+	--color-warning-text: #92400e;
+	--color-warning-border: #fbd38d;
+	--color-warning-icon-bg: #fef3c7;
+	--color-warning-icon: #b45309;
+
+	/* Danger / Distress / Alert */
+	--color-danger-bg: #fdf0f0;
+	--color-danger-text: #b91c1c;
+	--color-danger-border: #fecaca;
+	--color-danger-icon-bg: #fee2e2;
+	--color-danger-icon: #dc2626;
+
+	/* Neutral / Info */
+	--color-neutral-bg: #f1f4f2;
+	--color-neutral-text: #334e44;
+	--color-neutral-border: #d5ded9;
+	--color-info-bg: #e0f2fe;
+	--color-info-text: #0369a1;
+	--color-info-border: #bae6fd;
+
+	/* --------------------------------------------------
+	   6. RADII & SHADOWS
+	-------------------------------------------------- */
+	--radius-xs: 6px;
+	--radius-sm: 9px;
+	--radius-md: 12px;
+	--radius-lg: 16px;
+	--radius-xl: 20px;
+	--radius-full: 9999px;
+
+	--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+	--shadow-md: 0 4px 14px rgba(23, 63, 49, 0.05);
+	--shadow-lg: 0 8px 24px rgba(23, 63, 49, 0.08);
+}
+
+/* =====================================================
+   GLOBAL BASE RESETS
+===================================================== */
+*, *::before, *::after {
+	box-sizing: border-box;
+}
+
+html, body {
+	margin: 0;
+	padding: 0;
+	min-height: 100%;
+}
+
+body {
+	background-color: var(--color-bg);
+	color: var(--color-text-body);
+	font-family: var(--font-body);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+button, input, select, textarea, a {
+	font-family: inherit;
+}

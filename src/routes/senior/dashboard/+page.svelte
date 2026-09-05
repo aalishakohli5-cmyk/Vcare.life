@@ -336,6 +336,216 @@
 
 
 <div class="app">
+
+	<!-- =======================================================
+	     SIDEBAR
+	     ======================================================= -->
+
+	<aside class="sidebar">
+
+		<div class="brand">
+			<div class="logo">♥</div>
+
+			<div class="brand-copy">
+				<strong>Vcare.life</strong>
+				<span>A Voice That Cares</span>
+			</div>
+		</div>
+
+
+		<nav class="main-nav">
+
+			<a href="/senior/dashboard" class="nav-link active">
+				<span class="nav-icon">⌂</span>
+
+				<div>
+					<strong>Home</strong>
+					<small>Your day at a glance</small>
+				</div>
+			</a>
+
+
+			<a href="/senior/medications" class="nav-link">
+    <span class="nav-icon">📋</span>
+
+    <div>
+        <strong>Health Routine</strong>
+        <small>Walks, yoga, medicines & more</small>
+    </div>
+</a>
+
+
+
+			<button class="nav-link" onclick={() => scrollToSection('routine-section')}>
+				<span class="nav-icon">◷</span>
+
+				<div>
+					<strong>Reminders</strong>
+					<small>Your routine & plans</small>
+				</div>
+			</button>
+
+
+
+			<button class="nav-link" onclick={() => scrollToSection('calls-section')}>
+				<span class="nav-icon">☎</span>
+
+				<div>
+					<strong>Vcare Calls</strong>
+					<small>Calls & summaries</small>
+				</div>
+			</button>
+
+
+			<button class="nav-link" onclick={() => scrollToSection('care-section')}>
+				<span class="nav-icon">♡</span>
+
+				<div>
+					<strong>Care Circle</strong>
+					<small>Your trusted people</small>
+				</div>
+			</button>
+
+		</nav>
+
+
+		<!-- SAMPLE CALL -->
+
+		<div class="sample-card">
+
+			<div class="sample-phone">
+
+				<div class="sample-speaker"></div>
+
+				<div class="sample-screen">
+					<span>VCARE</span>
+					<strong>Try me!</strong>
+					<div>♥</div>
+				</div>
+
+			</div>
+
+
+			<div class="sample-copy">
+				<p>EXPERIENCE VCARE</p>
+
+				<h3>Take a sample call</h3>
+
+				<span>
+					See how Vcare checks in with you.
+				</span>
+			</div>
+
+
+			<button
+				class="sample-button"
+				onclick={takeSampleCall}
+				disabled={isCalling}
+			>
+				{isCalling ? '📞 Calling...' : '☎ Call me'}
+			</button>
+
+
+			{#if sampleCallMessage}
+				<p class="sample-message">
+					{sampleCallMessage}
+				</p>
+			{/if}
+
+		</div>
+
+
+		<div class="sidebar-footer">
+			<span>♡</span>
+			<p>
+				Small conversations.<br />
+				A little more care.
+			</p>
+		</div>
+
+	</aside>
+
+
+
+	<!-- =======================================================
+	     MAIN CONTENT
+	     ======================================================= -->
+
+	<div class="main-area">
+
+
+		<!-- ===================================================
+		     TOP BAR
+		     =================================================== -->
+
+		<header class="topbar">
+
+			<div class="mobile-logo">
+				<div class="logo small">♥</div>
+				<strong>Vcare.life</strong>
+			</div>
+
+
+			<div class="top-date">
+				<span>▣</span>
+
+				<div>
+					<small>TODAY</small>
+					<strong>{currentDate}</strong>
+                    <span class="live-time">{currentTime}</span>
+				</div>
+			</div>
+
+
+			<div class="top-actions">
+
+				<button class="help" onclick={() => helpOpen = !helpOpen}>
+					?
+					<span>Help</span>
+				</button>
+
+
+				<div class="profile-container">
+					<button class="profile" onclick={() => profileOpen = !profileOpen}>
+
+						<div class="avatar">
+							{senior.firstName.charAt(0).toUpperCase()}
+						</div>
+
+						<div class="profile-name">
+							<strong>{senior.firstName}</strong>
+							<span>My profile</span>
+						</div>
+
+						<span class="dropdown-arrow">⌄</span>
+
+					</button>
+
+					{#if profileOpen}
+						<div class="profile-menu">
+							<div class="profile-menu-header">
+								<strong>{senior.fullName || senior.firstName}</strong>
+								<small>{senior.phone || senior.email}</small>
+							</div>
+							<a href="/senior/medications" class="menu-item" onclick={() => profileOpen = false}>
+								<span>💊</span> My Medicines
+							</a>
+							<button class="menu-item" onclick={() => { profileOpen = false; scrollToSection('care-section'); }}>
+								<span>♡</span> Care Circle
+							</button>
+							<button class="menu-item logout" onclick={logout}>
+								<span>↗</span> Sign Out
+							</button>
+						</div>
+					{/if}
+				</div>
+
+			</div>
+
+		</header>
+
+
+
 		<main class="content">
 
 
@@ -473,16 +683,16 @@
 								TODAY
 							</p>
 
-							<h2>Your medicines</h2>
+							<h2>Your Daily Routine</h2>
 
 							<span class="panel-subtitle">
-								Stay on track with today's medication.
+								Stay on track with today's routine — walks, yoga, and medicines.
 							</span>
 						</div>
 
 
 						<div class="panel-icon medicine-panel-icon">
-							✚
+							📋
 						</div>
 
 					</div>
@@ -544,7 +754,7 @@
 											onclick={() =>
 												markMedicineTaken(medicine.id)}
 										>
-											I took this
+											I completed this
 										</button>
 
 									{/if}
@@ -1021,20 +1231,6 @@
 
 	:global(html) {
 		background: #f9f0e0;
-	}
-
-	:global(body) {
-		margin: 0;
-
-		background: #f9f0e0;
-		color: #30291f;
-
-		font-family:
-			"Comic Sans MS",
-			"Comic Sans",
-			cursive;
-
-		-webkit-font-smoothing: antialiased;
 	}
 
 	button,

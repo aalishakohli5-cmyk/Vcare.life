@@ -436,23 +436,10 @@
     box-sizing: border-box;
   }
 
-  :global(html),
-  :global(body) {
+  :global(html) {
     margin: 0;
     padding: 0;
     min-height: 100%;
-  }
-
-  :global(body) {
-    font-family:
-      Inter,
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      sans-serif;
-
-    background: #f5f7f1;
-    color: #153d32;
   }
 
   :global(button) {

@@ -370,31 +370,53 @@
 </script>
 
 <svelte:head>
-	<title>My Medicines — Vcare.life</title>
+	<title>My Daily Routine — Vcare.life</title>
 </svelte:head>
 
 <div class="page">
+	<header class="topbar">
+		<button class="brand" onclick={goHome}>
+			<div class="logo">♥</div>
+
+			<div class="brand-copy">
+				<strong>Vcare.life</strong>
+				<span>A Voice That Cares</span>
+			</div>
+		</button>
+
+		<div class="profile">
+			<div class="avatar">
+				{senior.firstName.charAt(0).toUpperCase()}
+			</div>
+
+			<div>
+				<strong>{senior.firstName}</strong>
+				<span>My routine</span>
+			</div>
+		</div>
+	</header>
+
 	<main class="content">
 		<section class="hero">
 			<div>
 				<p class="eyebrow">YOUR CARE PLAN</p>
 
 				<h1>
-					Your <span>medicines.</span>
+					Your <span>daily routine.</span>
 				</h1>
 
 				<p class="hero-copy">
 					Keep everything in one simple place.
-					Vcare can check in with you about these medicines.
+					Vcare can check in with you about walks, yoga, medicines, and more.
 				</p>
 			</div>
 
 			<div class="hero-pill">
-				<div>💊</div>
+				<div>📋</div>
 
 				<span>
 					<strong>{medicines.length}</strong>
-					medicines
+					routine items
 				</span>
 			</div>
 		</section>
@@ -432,10 +454,10 @@
 			<div class="section-header">
 				<div>
 					<p class="eyebrow">TODAY</p>
-					<h2>Medication plan</h2>
+					<h2>Daily routine plan</h2>
 
 					<p>
-						Add the medicines you want Vcare to remember.
+						Add the habits and medicines you want Vcare to remind you about.
 					</p>
 				</div>
 
@@ -444,7 +466,7 @@
 					onclick={() => (showAddForm = !showAddForm)}
 				>
 					<span>+</span>
-					Add medicine
+					Add routine item
 				</button>
 			</div>
 
@@ -635,18 +657,6 @@
 
 	:global(html) {
 		background: #fbf2e3;
-	}
-
-	:global(body) {
-		margin: 0;
-		background: #fbf2e3;
-		font-family:
-			Inter,
-			-apple-system,
-			BlinkMacSystemFont,
-			"Segoe UI",
-			sans-serif;
-		color: #294537;
 	}
 
 	button,

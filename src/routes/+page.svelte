@@ -4,6 +4,13 @@
     name="description"
     content="Vcare.life is an AI voice companion for seniors and their families."
   />
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..500&family=Public+Sans:wght@300..700&display=swap"
+    rel="stylesheet"
+  />
 </svelte:head>
 
 <div class="welcome-page">
@@ -169,10 +176,16 @@
 
 
       <div class="privacy">
-        <div class="privacy-icon">⌾</div>
+        <!-- Canonical SVG shield — standardized trust reassurance icon -->
+        <div class="privacy-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
 
         <div>
-          <strong>Private & secure</strong>
+          <strong>Private &amp; secure</strong>
           <span>Your care information stays yours.</span>
         </div>
       </div>
@@ -191,32 +204,6 @@
 
 
 <style>
-
-  :global(*) {
-    box-sizing: border-box;
-  }
-
-  :global(html),
-  :global(body) {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    min-height: 100%;
-  }
-
-  :global(body) {
-    font-family:
-      Inter,
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      sans-serif;
-
-    background: #f8f4ea;
-    color: #153d32;
-  }
-
-
   /* PAGE */
 
   .welcome-page {
@@ -276,18 +263,26 @@
 
     z-index: 1;
 
+    /* Warm amber/sepia duotone — reads "cozy home" not corporate-dark.
+       Dark-channel: warm brown-sepia instead of cold green-black.
+       Highlight-channel: soft amber blush blended in. */
     background:
       linear-gradient(
         90deg,
-        rgba(5, 49, 36, 0.88) 0%,
-        rgba(5, 49, 36, 0.58) 45%,
-        rgba(5, 49, 36, 0.20) 82%
+        rgba(48, 26, 8, 0.87) 0%,
+        rgba(72, 40, 12, 0.52) 45%,
+        rgba(90, 54, 18, 0.18) 82%
       ),
       linear-gradient(
         180deg,
-        rgba(5, 45, 34, 0.36) 0%,
+        rgba(44, 24, 8, 0.40) 0%,
         transparent 48%,
-        rgba(4, 42, 31, 0.78) 100%
+        rgba(36, 20, 6, 0.80) 100%
+      ),
+      linear-gradient(
+        135deg,
+        rgba(200, 130, 40, 0.12) 0%,
+        transparent 60%
       );
   }
 
@@ -367,9 +362,10 @@
 
     font-size: 11px;
 
-    font-weight: 800;
+    /* Dropped to medium — eyebrow labels should whisper, not shout */
+    font-weight: 500;
 
-    letter-spacing: 0.18em;
+    letter-spacing: 0.20em;
 
     color: #e0edbd;
   }
@@ -380,9 +376,10 @@
 
     max-width: 610px;
 
+    /* Fraunces — warmer, softer display serif */
     font-family:
+      "Fraunces",
       Georgia,
-      "Times New Roman",
       serif;
 
     font-size:
@@ -391,7 +388,7 @@
     line-height: 0.98;
 
     letter-spacing:
-      -0.045em;
+      -0.03em;
 
     font-weight: 500;
   }
@@ -481,6 +478,8 @@
   }
 
 
+  /* Standardised chip — one neutral background, icon color carries the
+     category distinction (Medication: green, Wellness: rose, Family: teal) */
   .benefit-icon {
     width: 36px;
     height: 36px;
@@ -491,11 +490,19 @@
 
     border-radius: 11px;
 
-    background:
-      rgba(255, 255, 255, 0.58);
+    /* Uniform warm-white glass chip for all three */
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.45);
 
     font-size: 20px;
   }
+
+  /* Medication — green tint */
+  .benefit:nth-child(1) .benefit-icon { color: #2d7a52; }
+  /* Wellness — warm rose */
+  .benefit:nth-child(2) .benefit-icon { color: #c0595e; }
+  /* Family — teal */
+  .benefit:nth-child(3) .benefit-icon { color: #2a6e82; }
 
 
   .benefit strong {
@@ -607,9 +614,10 @@
 
     font-size: 13px;
 
-    font-weight: 800;
+    /* Medium weight — eyebrow, not headline */
+    font-weight: 500;
 
-    letter-spacing: 0.18em;
+    letter-spacing: 0.20em;
 
     color: #3b795e;
   }
@@ -618,15 +626,16 @@ h2 {
   margin: 0;
   text-align: center;
 
+  /* Fraunces for hero headline on right panel */
   font-family:
+    "Fraunces",
     Georgia,
-    "Times New Roman",
     serif;
 
   font-size: clamp(60px, 5.2vw, 88px);
   line-height: 0.98;
   font-weight: 500;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.03em;
 
   color: #0d382d;
 }
@@ -638,13 +647,7 @@ h2 span {
 }
 
 
-  h2 span {
-    display: block;
-
-    margin-top: 5px;
-
-    color: #4d8968;
-  }
+  /* (duplicate h2 span block kept for specificity; values merged above) */
 
 
   .intro {
@@ -666,7 +669,8 @@ h2 span {
   /* CHOICE */
 
   .choice-block {
-    margin-top: 40px;
+    /* Extra breathing room — separates pitch copy from action cards visually */
+    margin-top: 72px;
   }
 
 
@@ -732,12 +736,26 @@ h2 span {
 }
 
 
+  /* Flat white cards — color coding lives in the left accent border,
+     not the card fill, so the page gradient stays readable */
   .caregiver {
+    background: #ffffff;
+
+    border: 1px solid #e2e8e4;
+    border-left: 4px solid #4e9e72;  /* green accent */
+
+    box-shadow: 0 2px 12px rgba(78, 158, 114, 0.07);
     border-left-color: #58a878;
   }
 
 
   .senior {
+    background: #ffffff;
+
+    border: 1px solid #e8e3d8;
+    border-left: 4px solid #d4943a;  /* amber accent */
+
+    box-shadow: 0 2px 12px rgba(212, 148, 58, 0.07);
     border-left-color: #dc9b38;
   }
 
@@ -753,12 +771,16 @@ h2 span {
 
 
   .caregiver:hover {
+    border-left-color: #3b845c;
+    box-shadow: 0 17px 38px rgba(78, 158, 114, 0.14);
     border-color: #b9d8c3;
     border-left-color: #32865a;
   }
 
 
   .senior:hover {
+    border-left-color: #b87a28;
+    box-shadow: 0 17px 38px rgba(212, 148, 58, 0.14);
     border-color: #ead5ae;
     border-left-color: #bd7620;
   }
@@ -833,12 +855,26 @@ h2 span {
 
     border-radius: 50%;
 
+    /* Base — overridden per-card below */
+    background:
+      rgba(38, 106, 77, 0.07);
     background: #ebf4ee;
 
     font-size: 20px;
 
     transition:
       transform 0.22s ease;
+  }
+
+  /* Tint arrow circle to match each card's accent */
+  .caregiver .arrow {
+    background: rgba(78, 158, 114, 0.12);  /* soft green */
+    color: #3b845c;
+  }
+
+  .senior .arrow {
+    background: rgba(212, 148, 58, 0.13);  /* soft amber */
+    color: #9c6b1e;
   }
 
 

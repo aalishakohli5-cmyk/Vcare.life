@@ -9,6 +9,7 @@
 		rememberCareRecipient
 	} from '$lib/careConnections';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
+	import Badge from '$lib/components/Badge.svelte';
 	import '../theme.css';
 
 	/* =====================================================
@@ -219,7 +220,7 @@
 							duration: latestCall.duration ? `${latestCall.duration}s` : '35s',
 							status: latestCall.status || 'completed',
 							summary: latestCall.transcript
-								? (latestCall.transcript.length > 100 ? latestCall.transcript.substring(0, 100) + '...' : latestCall.transcript)
+								? (latestCall.transcript.length > 120 ? latestCall.transcript.substring(0, 120) + '...' : latestCall.transcript)
 								: `${senior.firstName} was called for check-in`
 						};
 						senior.lastCheckIn = `${recentCall.date} at ${recentCall.time}`;
@@ -380,8 +381,15 @@
 
 <svelte:head>
 	<title>Caregiver Dashboard — Vcare.life</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+	<link
+		href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..500&family=Public+Sans:wght@300..700&display=swap"
+		rel="stylesheet"
+	/>
 </svelte:head>
 
+<div class="app">
 
 <div class="app" data-caregiver-portal>
 
@@ -392,67 +400,53 @@
 	<aside class="sidebar">
 
 		<a href="/" class="brand">
-
-			<div class="brand-heart">
-				♥
-			</div>
-
+			<div class="brand-heart">♥</div>
 			<div>
 				<strong>Vcare.life</strong>
 				<span>A Voice That Cares</span>
 			</div>
-
 		</a>
-
 
 		<div class="care-label">
 			CAREGIVER SPACE
 		</div>
 
-
 		<nav>
-
 			<a href="/caregiver/dashboard" class="nav-item active">
-
-				<span class="nav-icon">
-					⌂
+				<span class="nav-icon" aria-hidden="true">
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+						<polyline points="9 22 9 12 15 12 15 22"/>
+					</svg>
 				</span>
-
 				<span>Home</span>
-
 			</a>
-
 
 			<a href="/caregiver/medicines" class="nav-item">
-
-				<span class="nav-icon">
-					✚
+				<span class="nav-icon" aria-hidden="true">
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+					</svg>
 				</span>
-
-				<span>Medicines</span>
-
+				<span>Health Routine</span>
 			</a>
-
 
 			<a href="/caregiver/calls" class="nav-item">
-
-				<span class="nav-icon">
-					☎
+				<span class="nav-icon" aria-hidden="true">
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+					</svg>
 				</span>
-
 				<span>Vcare Calls</span>
-
 			</a>
 
-
 			<a href="/caregiver/senior" class="nav-item">
-
-				<span class="nav-icon">
-					♡
+				<span class="nav-icon" aria-hidden="true">
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+					</svg>
 				</span>
-
 				<span>Senior Profile</span>
-
 			</a>
 
 			<a href="/caregiver/settings" class="nav-item">
@@ -462,56 +456,44 @@
 
 		</nav>
 
-
 		<div class="sidebar-bottom">
-
 			<a href="/caregiver/senior" class="mini-senior">
+				<div class="mini-avatar">
+					{senior.initials}
 
 				<div class="mini-avatar" aria-hidden="true">
 					♡
 				</div>
-
-				<div>
+				<div class="mini-senior-info">
 					<small>CARING FOR</small>
 					<strong>{senior.name}</strong>
 				</div>
-
 			</a>
 
-
 			<div class="profile">
-
 				<div class="profile-avatar">
 					{caregiverInitial}
 				</div>
-
 				<div class="profile-copy">
-
-					<strong>
-						{caregiverName}
-					</strong>
-
-					<span>
-						Caregiver
-					</span>
-
+					<strong>{caregiverName}</strong>
+					<span>Caregiver</span>
 				</div>
-
-
 				<button
 					class="logout"
 					onclick={logout}
 					aria-label="Sign out"
+					title="Sign out"
 				>
-					↗
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+						<polyline points="16 17 21 12 16 7"/>
+						<line x1="21" y1="12" x2="9" y2="12"/>
+					</svg>
 				</button>
-
 			</div>
-
 		</div>
 
 	</aside>
-
 
 	<!-- =====================================================
 	     MAIN
@@ -520,72 +502,59 @@
 	<main class="main">
 
 		<!-- TOP BAR -->
-
 		<header class="topbar">
-
 			<div>
-
 				<p class="date">
 					{currentDate}
 				</p>
-
-				<h1>
+				<!-- DISPLAY SERIF ONLY HERE FOR GREETING -->
+				<h1 class="greeting-serif">
 					{greeting}, {caregiverName.split(' ')[0]}!
 				</h1>
-
 				<p class="intro">
 					Here's how {senior.firstName} is doing today.
 				</p>
-
 			</div>
 
-
-			<div class="live-time">
-
-				<span class="live-dot"></span>
-
-				<div>
-					<small>LIVE</small>
-					<strong>{currentTime}</strong>
+			<!-- CLARIFIED LIVE MONITORING INDICATOR -->
+			<div class="live-status-pill" title="System monitoring active">
+				<span class="live-pulse-dot" aria-hidden="true"></span>
+				<div class="live-status-text">
+					<span class="live-status-label">ACTIVE MONITORING</span>
+					<strong class="live-status-time">{currentTime}</strong>
 				</div>
-
 			</div>
-
 		</header>
 
-
 		<!-- =================================================
-		     SENIOR STATUS
+		     SENIOR STATUS CARD
 		================================================= -->
-
 		<section class="senior-card">
-
 			<div class="senior-main">
+				<div class="senior-avatar">
+					{senior.initials}
 
 				<div class="senior-avatar" aria-hidden="true">
 					♡
 				</div>
 
-
 				<div class="senior-info">
+					<p class="eyebrow">YOUR SENIOR</p>
 
 					<p class="eyebrow">
 						CARE RECIPIENT
 					</p>
 
 					<div class="senior-name-row">
-
-						<h2>
-							{senior.name}
-						</h2>
-
-						<span class="status-pill">
-							<span></span>
+						<!-- Sans-serif headline for data consistency -->
+						<h2>{senior.name}</h2>
+						<Badge
+							variant={senior.status === 'Connected' ? 'success' : senior.status === 'Loading...' ? 'neutral' : 'warning'}
+							dot={true}
+						>
 							{senior.status}
-						</span>
-
+						</Badge>
 					</div>
-
 
 					<p class="checkin">
 						Last Vcare check-in:
@@ -601,37 +570,29 @@
 					</a>
 
 				</div>
-
 			</div>
 
-
 			<div class="senior-actions">
-
 				<div class="mood-small">
-
-					<span class="mood-emoji">
-						{senior.moodEmoji}
-					</span>
-
+					<span class="mood-emoji">{senior.moodEmoji}</span>
 					<div>
 						<small>TODAY'S MOOD</small>
 						<strong>{senior.mood}</strong>
 					</div>
-
 				</div>
 
-
+				<!-- Single-line legible button label -->
 				<a
 					href={`tel:${senior.phone}`}
-					class="call-button"
-					aria-label={`Call ${senior.firstName}`}
+					class="call-action-button"
+					aria-label={`Direct phone call to ${senior.firstName}`}
 				>
-					<span>☎</span>
-					Call {senior.firstName}
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+					</svg>
+					<span>Call {senior.firstName}</span>
 				</a>
-
 			</div>
-
 		</section>
 
 		<section class="connection-panel" aria-labelledby="connection-title">
@@ -681,429 +642,222 @@
 		<!-- =================================================
 		     MAIN GRID
 		================================================= -->
-
 		<section class="dashboard-grid">
 
-
 			<!-- =================================================
-			     MEDICATIONS
+			     HEALTH & DAILY ROUTINE (MEDICATIONS, WALKS, YOGA, DIET)
 			================================================= -->
-
 			<article class="panel medication-panel">
-
 				<div class="panel-header">
-
 					<div>
-
-						<p class="eyebrow">
-							TODAY
-						</p>
-
-						<h2>
-							{senior.firstName}'s medicines
-						</h2>
-
-						<span class="panel-subtitle">
-							A quick look at today's medication.
-						</span>
-
+						<p class="eyebrow">TODAY</p>
+						<h2>{senior.firstName}'s Daily Routine</h2>
+						<span class="panel-subtitle">Today's medicines, walks, yoga, and wellness habits.</span>
 					</div>
-
-
-					<div class="medicine-icon">
-						✚
+					<div class="panel-icon medicine-icon" aria-hidden="true">
+						🌿
 					</div>
-
 				</div>
-
 
 				<div class="medicine-list">
-
-					{#each medications as medicine}
-
-						<div class="medicine-row">
-
-							<div
-								class="medicine-check"
-								class:taken={medicine.status === 'taken'}
-							>
-								{medicine.status === 'taken' ? '✓' : '○'}
-							</div>
-
-
-							<div class="medicine-info">
-
-								<strong>
-									{medicine.name}
-								</strong>
-
-								<span>
-									{medicine.dosage} · {medicine.time}
-								</span>
-
-							</div>
-
-
-							<span
-								class="medicine-status"
-								class:taken={medicine.status === 'taken'}
-								class:pending={medicine.status === 'pending'}
-							>
-								{medicine.status === 'taken'
-									? 'Taken'
-									: 'Pending'}
-							</span>
-
+					{#if medications.length === 0}
+						<div class="empty-state">
+							<p>No routine items scheduled for today.</p>
 						</div>
+					{:else}
+						{#each medications as item}
+							<div class="medicine-row">
+								<div
+									class="medicine-check"
+									class:taken={item.status === 'taken'}
+									aria-hidden="true"
+								>
+									{item.status === 'taken' ? '✓' : '○'}
+								</div>
 
-					{/each}
+								<div class="medicine-info">
+									<strong>{item.name}</strong>
+									<span class="medicine-meta">{item.dosage ? `${item.dosage} · ` : ''}{item.time}</span>
+								</div>
 
+								<Badge variant={item.status === 'taken' ? 'success' : 'warning'}>
+									{item.status === 'taken' ? 'Completed' : 'Pending'}
+								</Badge>
+							</div>
+						{/each}
+					{/if}
 				</div>
-
 
 				<div class="panel-actions">
-
-					<button
-						class="add-button"
-						onclick={openMedicines}
-					>
-						<span>＋</span>
-						Add medicine
+					<button class="add-button" onclick={openMedicines}>
+						<span>＋</span> Add routine item
 					</button>
-
-
-					<button
-						class="text-button"
-						onclick={openMedicines}
-					>
-						View all
-						<span>→</span>
+					<button class="text-button" onclick={openMedicines}>
+						View all routines <span>→</span>
 					</button>
-
 				</div>
-
 			</article>
-
 
 			<!-- =================================================
-			     ALERTS
+			     ESCALATED ALERTS / NEEDS ATTENTION
 			================================================= -->
-
-			<article class="panel alert-panel">
-
+			<article class="panel alert-panel" class:has-alerts={alerts.length > 0}>
 				<div class="panel-header compact">
-
 					<div>
-
-						<p class="eyebrow orange">
-							NEEDS ATTENTION
+						<p class="eyebrow" class:orange={alerts.length > 0}>
+							{alerts.length > 0 ? 'ACTION REQUIRED' : 'STATUS'}
 						</p>
-
-						<h2>
-							Right now
-						</h2>
-
+						<h2>Needs Attention</h2>
 					</div>
-
-
-					<div class="alert-icon">
-						!
+					<div class="panel-icon alert-icon" class:alert-active={alerts.length > 0} aria-hidden="true">
+						{alerts.length > 0 ? '⚠️' : '🛡️'}
 					</div>
-
 				</div>
-
 
 				{#if alerts.length > 0}
-
 					<div class="alerts">
-
 						{#each alerts as alert}
-
-							<div class="alert">
-
-								<div class="alert-symbol">
-									!
+							<div class="alert-item">
+								<div class="alert-symbol" aria-hidden="true">!</div>
+								<div class="alert-body">
+									<strong>{alert.title}</strong>
+									<p>{alert.message}</p>
 								</div>
-
-								<div>
-
-									<strong>
-										{alert.title}
-									</strong>
-
-									<p>
-										{alert.message}
-									</p>
-
-								</div>
-
 							</div>
-
 						{/each}
-
 					</div>
-
 				{:else}
-
 					<div class="all-good">
-
-						<div>
-							✓
+						<div class="all-good-icon" aria-hidden="true">✓</div>
+						<div class="all-good-copy">
+							<strong>Everything looks good.</strong>
+							<p>Nothing needs your immediate attention right now.</p>
 						</div>
-
-						<section>
-
-							<strong>
-								Everything looks good.
-							</strong>
-
-							<p>
-								Nothing needs your attention right now.
-							</p>
-
-						</section>
-
 					</div>
-
 				{/if}
 
-
 				<div class="care-note">
-
-					<span>♡</span>
-
-					<p>
-						We'll keep this space quiet unless
-						something actually needs you.
-					</p>
-
+					<span aria-hidden="true">♡</span>
+					<p>We'll keep this space quiet unless something actually needs you.</p>
 				</div>
-
 			</article>
-
 
 			<!-- =================================================
 			     RECENT VCARE CALL
 			================================================= -->
-
 			<article class="panel call-panel">
-
 				<div class="panel-header">
-
 					<div>
-
-						<p class="eyebrow">
-							RECENT CHECK-IN
-						</p>
-
-						<h2>
-							Latest Vcare call
-						</h2>
-
-						<span class="panel-subtitle">
-							A small window into how
-							{senior.firstName} is doing.
-						</span>
-
+						<p class="eyebrow">RECENT CHECK-IN</p>
+						<h2>Latest Vcare call</h2>
+						<span class="panel-subtitle">A small window into how {senior.firstName} is doing.</span>
 					</div>
-
-
-					<div class="call-icon">
+					<div class="panel-icon call-icon" aria-hidden="true">
 						☎
 					</div>
-
 				</div>
 
-
 				<div class="call-summary">
-
 					<div class="call-top">
-
-						<div>
-
-							<strong>
-								{recentCall.date} · {recentCall.time}
-							</strong>
-
-							<span>
-								{recentCall.duration}
-							</span>
-
+						<div class="call-time-info">
+							<strong>{recentCall.date} · {recentCall.time}</strong>
+							<span class="call-duration">Duration: {recentCall.duration}</span>
 						</div>
-
-
-						<span class="completed">
-							✓ {recentCall.status}
-						</span>
-
+						<Badge variant="success" dot={true}>
+							{recentCall.status}
+						</Badge>
 					</div>
-
 
 					<div class="call-tags">
-
-						<span>
-							💊 Medicine confirmed
-						</span>
-
-						<span>
-							🙂 Mood good
-						</span>
-
+						<Badge variant="neutral">💊 Medicine confirmed</Badge>
+						<Badge variant="neutral">🙂 Mood good</Badge>
 					</div>
-
 
 					<p class="summary-text">
 						"{recentCall.summary}"
 					</p>
-
 				</div>
 
-
-				<button
-					class="wide-button"
-					onclick={openCalls}
-				>
-					View call history
-					<span>→</span>
+				<button class="wide-button" onclick={openCalls}>
+					<span>View call history & transcripts</span>
+					<span aria-hidden="true">→</span>
 				</button>
-
 			</article>
-
 
 			<!-- =================================================
-			     MOOD
+			     WELLBEING / MOOD
 			================================================= -->
-
 			<article class="panel mood-panel">
-
-				<div>
-
-					<p class="eyebrow">
-						WELLBEING
-					</p>
-
-					<h2>
-						How {senior.firstName} has been feeling
-					</h2>
-
+				<div class="panel-header">
+					<div>
+						<p class="eyebrow">WELLBEING</p>
+						<h2>How {senior.firstName} has been feeling</h2>
+					</div>
+					<div class="panel-icon mood-icon" aria-hidden="true">
+						🌱
+					</div>
 				</div>
-
 
 				<div class="current-mood">
-
-					<div class="big-emoji">
+					<div class="big-emoji" aria-hidden="true">
 						{senior.moodEmoji}
 					</div>
-
-					<div>
-
-						<small>TODAY</small>
-
-						<strong>
-							{senior.mood}
-						</strong>
-
-						<span>
-							From the latest Vcare check-in
-						</span>
-
+					<div class="current-mood-text">
+						<small>TODAY'S ASSESSMENT</small>
+						<strong>{senior.mood}</strong>
+						<span>From the latest automated voice check-in</span>
 					</div>
-
 				</div>
-
 
 				<div class="mood-history">
-
-					<div>
+					<div class="mood-row">
 						<span>Yesterday</span>
-						<strong>🙂 Okay</strong>
+						<Badge variant="neutral">🙂 Okay</Badge>
 					</div>
-
-					<div>
+					<div class="mood-row">
 						<span>14 Aug</span>
-						<strong>😊 Good</strong>
+						<Badge variant="success">😊 Good</Badge>
 					</div>
-
-					<div>
+					<div class="mood-row">
 						<span>13 Aug</span>
-						<strong>😊 Good</strong>
+						<Badge variant="success">😊 Good</Badge>
 					</div>
-
 				</div>
 
-
-				<button
-					class="text-button mood-link"
-					onclick={openCalls}
-				>
-					View wellbeing history
-					<span>→</span>
+				<button class="text-button mood-link" onclick={openCalls}>
+					View wellbeing history <span>→</span>
 				</button>
-
 			</article>
 
 		</section>
 
-
 		<!-- =================================================
-		     BOTTOM SENIOR CONTACT
+		     BOTTOM BANNER — DIFFERENTIATED PURPOSE (VOICE CHECK-INS)
 		================================================= -->
-
 		<section class="contact-card">
-
-			<div>
-
-				<div class="contact-heart">
-					♥
+			<div class="contact-card-content">
+				<div class="contact-heart" aria-hidden="true">
+					🎧
 				</div>
-
 				<div>
-
-					<p class="eyebrow">
-						ONE TAP AWAY
-					</p>
-
-					<h2>
-						Want to hear {senior.firstName}'s voice?
-					</h2>
-
+					<p class="eyebrow">VOICE CHECK-IN ARCHIVE</p>
+					<h2>Review {senior.firstName}'s conversations</h2>
 					<p>
-						Call directly without searching for
-						their number.
+						Listen to the AI call recordings and read full check-in transcripts anytime.
 					</p>
-
 				</div>
-
 			</div>
-
 
 			<div class="contact-actions">
-
-				<button
-					class="profile-button"
-					onclick={openSenior}
-				>
-					View profile
+				<button class="profile-button" onclick={openSenior}>
+					Senior profile
 				</button>
-
-
-				<a
-					href={`tel:${senior.phone}`}
-					class="big-call-button"
-				>
-					<span>☎</span>
-
-					<div>
-						<small>CALL NOW</small>
-						<strong>{senior.firstName}</strong>
-					</div>
-
-				</a>
-
+				<button class="listen-button" onclick={openCalls}>
+					<span>Listen to calls</span>
+					<span aria-hidden="true">→</span>
+				</button>
 			</div>
-
 		</section>
-
 
 		<p class="closing">
 			♡ Vcare stays with them, so you can stay close without worrying every minute.
@@ -1113,59 +867,22 @@
 
 </div>
 
-
 <style>
-
-	:global(*) {
-		box-sizing: border-box;
-	}
-
-	:global(html),
-	:global(body) {
-		margin: 0;
-		min-height: 100%;
-	}
-
-	:global(body) {
-		background: #f7f0e2;
-
-		color: #173f31;
-
-		font-family:
-			"Comic Sans MS",
-			"Comic Sans",
-			"Chalkboard SE",
-			"Marker Felt",
-			cursive;
-	}
-
 	button,
 	a {
 		font-family: inherit;
 	}
 
-
 	/* =====================================================
-	   APP
+	   APP LAYOUT
 	===================================================== */
 
 	.app {
 		min-height: 100vh;
-
 		display: grid;
-
-		grid-template-columns:
-			245px 1fr;
-
-		background:
-			radial-gradient(
-				circle at 100% 0%,
-				rgba(223, 231, 93, 0.12),
-				transparent 25%
-			),
-			#f7f0e2;
+		grid-template-columns: 250px 1fr;
+		background: #f8f6f0;
 	}
-
 
 	/* =====================================================
 	   SIDEBAR
@@ -1173,1798 +890,1124 @@
 
 	.sidebar {
 		position: sticky;
-
 		top: 0;
-
 		height: 100vh;
-
-		padding:
-			28px 18px
-			22px;
-
+		padding: 26px 18px 20px;
 		display: flex;
-
 		flex-direction: column;
-
-		background:
-			linear-gradient(
-				180deg,
-				#073e2c,
-				#07563a
-			);
-
+		background: linear-gradient(180deg, #093325 0%, #0d4633 100%);
 		color: white;
-
-		border-right:
-			1px solid
-			rgba(255,255,255,0.08);
+		border-right: 1px solid rgba(255, 255, 255, 0.08);
+		z-index: 20;
 	}
-
 
 	.brand {
 		display: flex;
-
 		align-items: center;
-
-		gap: 11px;
-
-		padding:
-			0 8px;
-
+		gap: 12px;
+		padding: 0 6px;
 		text-decoration: none;
-
 		color: white;
 	}
 
-
 	.brand-heart {
-		width: 42px;
-		height: 42px;
-
+		width: 40px;
+		height: 40px;
 		display: grid;
-
 		place-items: center;
-
-		border-radius: 13px;
-
+		border-radius: 12px;
 		background: white;
-
 		color: #0b6845;
-
-		font-size: 22px;
+		font-size: 20px;
+		flex-shrink: 0;
 	}
-
 
 	.brand > div:last-child {
 		display: flex;
-
 		flex-direction: column;
 	}
 
-
 	.brand strong {
-		font-size: 19px;
+		font-size: 18px;
+		font-weight: 700;
+		letter-spacing: -0.02em;
 	}
-
 
 	.brand span {
-		margin-top: 2px;
-
-		color:
-			rgba(255,255,255,0.65);
-
-		font-size: 8px;
+		margin-top: 1px;
+		color: rgba(255, 255, 255, 0.65);
+		font-size: 10px;
 	}
-
 
 	.care-label {
-		margin:
-			35px 10px
-			13px;
-
+		margin: 28px 8px 12px;
 		color: #dce765;
-
-		font-size: 9px;
-
-		font-weight: bold;
-
-		letter-spacing: 1.4px;
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.12em;
 	}
-
 
 	nav {
 		display: grid;
-
 		gap: 6px;
 	}
 
-
 	.nav-item {
-		min-height: 47px;
-
-		padding:
-			0 13px;
-
+		min-height: 44px;
+		padding: 0 14px;
 		display: flex;
-
 		align-items: center;
-
 		gap: 12px;
-
-		border-radius: 13px;
-
+		border-radius: 12px;
 		text-decoration: none;
-
-		color:
-			rgba(255,255,255,0.68);
-
-		font-size: 12px;
-
-		font-weight: bold;
-
-		transition:
-			0.18s ease;
+		color: rgba(255, 255, 255, 0.72);
+		font-size: 13px;
+		font-weight: 600;
+		transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
 	}
-
 
 	.nav-item:hover {
 		color: white;
-
-		background:
-			rgba(255,255,255,0.07);
-
-		transform:
-			translateX(3px);
+		background: rgba(255, 255, 255, 0.08);
+		transform: translateX(2px);
 	}
-
 
 	.nav-item.active {
-		color: #143d2e;
-
+		color: #0d3827;
 		background: #dce76a;
+		font-weight: 700;
 	}
-
 
 	.nav-icon {
-		width: 26px;
-
-		font-size: 17px;
-
-		text-align: center;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
 	}
-
 
 	.sidebar-bottom {
 		margin-top: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
 	}
 
-
 	.mini-senior {
-		margin-bottom: 13px;
-
-		padding:
-			11px;
-
+		padding: 10px 12px;
 		display: flex;
-
 		align-items: center;
-
 		gap: 10px;
-
-		border:
-			1px solid
-			rgba(255,255,255,0.10);
-
-		border-radius: 14px;
-
-		background:
-			rgba(255,255,255,0.06);
-
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: 13px;
+		background: rgba(255, 255, 255, 0.06);
 		text-decoration: none;
-
 		color: inherit;
-
-		transition: 0.2s ease;
+		transition: background 0.2s ease;
 	}
 
 	.mini-senior:hover {
-		background: rgba(255,255,255,0.12);
+		background: rgba(255, 255, 255, 0.12);
 	}
-
 
 	.mini-avatar {
-		width: 36px;
-		height: 36px;
-
+		width: 32px;
+		height: 32px;
 		display: grid;
-
 		place-items: center;
-
 		flex-shrink: 0;
-
-		border-radius: 11px;
-
+		border-radius: 9px;
 		background: #dce76a;
-
-		color: #16402e;
-
-		font-size: 10px;
-
-		font-weight: bold;
+		color: #143d2e;
+		font-size: 12px;
+		font-weight: 700;
 	}
 
-
-	.mini-senior > div:last-child {
+	.mini-senior-info {
 		min-width: 0;
-
 		display: flex;
-
 		flex-direction: column;
 	}
 
-
 	.mini-senior small {
-		color:
-			rgba(255,255,255,0.5);
-
-		font-size: 6px;
-
-		letter-spacing: 1px;
+		color: rgba(255, 255, 255, 0.55);
+		font-size: 9px;
+		font-weight: 600;
+		letter-spacing: 0.08em;
 	}
 
-
 	.mini-senior strong {
-		margin-top: 2px;
-
+		margin-top: 1px;
 		overflow: hidden;
-
 		color: white;
-
-		font-size: 10px;
-
+		font-size: 12px;
 		text-overflow: ellipsis;
-
 		white-space: nowrap;
 	}
 
-
 	.profile {
-		padding:
-			13px 8px 0;
-
+		padding-top: 12px;
 		display: flex;
-
 		align-items: center;
-
-		gap: 9px;
-
-		border-top:
-			1px solid
-			rgba(255,255,255,0.10);
+		gap: 10px;
+		border-top: 1px solid rgba(255, 255, 255, 0.10);
 	}
-
 
 	.profile-avatar {
-		width: 36px;
-		height: 36px;
-
+		width: 34px;
+		height: 34px;
 		display: grid;
-
 		place-items: center;
-
 		flex-shrink: 0;
-
 		border-radius: 50%;
-
 		background: #f3e6c8;
-
 		color: #174631;
-
-		font-size: 12px;
-
-		font-weight: bold;
+		font-size: 13px;
+		font-weight: 700;
 	}
-
 
 	.profile-copy {
 		min-width: 0;
-
 		display: flex;
-
 		flex: 1;
-
 		flex-direction: column;
 	}
 
-
 	.profile-copy strong {
 		overflow: hidden;
-
-		font-size: 10px;
-
+		font-size: 13px;
+		color: white;
 		text-overflow: ellipsis;
-
 		white-space: nowrap;
 	}
 
-
 	.profile-copy span {
-		margin-top: 2px;
-
-		color:
-			rgba(255,255,255,0.53);
-
-		font-size: 7px;
+		margin-top: 1px;
+		color: rgba(255, 255, 255, 0.55);
+		font-size: 11px;
 	}
-
 
 	.logout {
 		border: 0;
-
 		background: transparent;
-
-		color:
-			rgba(255,255,255,0.7);
-
+		color: rgba(255, 255, 255, 0.65);
 		cursor: pointer;
-
-		font-size: 15px;
+		padding: 6px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 8px;
+		transition: color 0.15s ease, background 0.15s ease;
 	}
 
+	.logout:hover {
+		color: white;
+		background: rgba(255, 255, 255, 0.12);
+	}
 
 	/* =====================================================
-	   MAIN
+	   MAIN CONTENT
 	===================================================== */
 
 	.main {
 		width: 100%;
-
-		max-width: 1500px;
-
+		max-width: 1380px;
 		margin: 0 auto;
-
-		padding:
-			34px
-			clamp(30px, 4vw, 65px)
-			45px;
+		padding: 32px clamp(24px, 3.5vw, 56px) 48px;
 	}
 
-
 	/* =====================================================
-	   TOP
+	   TOP BAR
 	===================================================== */
 
 	.topbar {
 		display: flex;
-
 		align-items: flex-start;
-
 		justify-content: space-between;
-
-		gap: 30px;
-
+		gap: 24px;
 		margin-bottom: 26px;
 	}
 
-
 	.date {
-		margin:
-			0 0 5px;
-
-		color: #85745f;
-
-		font-size: 10px;
-
-		font-weight: bold;
-
+		margin: 0 0 6px;
+		color: #4b6357;
+		font-size: 12px;
+		font-weight: 600;
 		text-transform: uppercase;
-
-		letter-spacing: 1px;
+		letter-spacing: 0.08em;
 	}
 
-
-	.topbar h1 {
+	/* FRAUNCES DISPLAY SERIF ONLY HERE */
+	.greeting-serif {
 		margin: 0;
-
-		color: #154a35;
-
-		font-size:
-			clamp(34px, 4vw, 51px);
-
-		line-height: 1;
-
-		letter-spacing: -2px;
+		color: #0e3b2c;
+		font-family: "Fraunces", Georgia, serif;
+		font-size: clamp(30px, 3.2vw, 42px);
+		line-height: 1.05;
+		font-weight: 500;
+		letter-spacing: -0.025em;
 	}
-
 
 	.intro {
-		margin:
-			9px 0 0;
-
-		color: #756653;
-
-		font-size: 12px;
+		margin: 8px 0 0;
+		color: #475569;
+		font-size: 14px;
 	}
 
-
-	.live-time {
-		padding:
-			10px 14px;
-
+	/* CLARIFIED LIVE INDICATOR */
+	.live-status-pill {
+		padding: 8px 14px;
 		display: flex;
-
 		align-items: center;
-
-		gap: 9px;
-
-		border:
-			1px solid #ddd1b6;
-
-		border-radius: 14px;
-
-		background:
-			rgba(255,255,255,0.42);
+		gap: 10px;
+		border: 1px solid #d4dec9;
+		border-radius: 12px;
+		background: #ffffff;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 	}
 
-
-	.live-dot {
+	.live-pulse-dot {
 		width: 8px;
 		height: 8px;
-
 		border-radius: 50%;
-
-		background: #2c9a59;
-
-		box-shadow:
-			0 0 0 4px
-			rgba(44,154,89,0.11);
-
-		animation:
-			pulse 2s infinite;
+		background: #16a34a;
+		box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+		animation: livePulse 2s infinite ease-in-out;
+		flex-shrink: 0;
 	}
 
-
-	@keyframes pulse {
-
-		50% {
-			box-shadow:
-				0 0 0 7px
-				rgba(44,154,89,0.04);
+	@keyframes livePulse {
+		0%, 100% {
+			transform: scale(1);
+			box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
 		}
-
+		50% {
+			transform: scale(1.15);
+			box-shadow: 0 0 0 6px rgba(22, 163, 74, 0.08);
+		}
 	}
 
-
-	.live-time div {
+	.live-status-text {
 		display: flex;
-
 		flex-direction: column;
 	}
 
-
-	.live-time small {
-		color: #2c7a4c;
-
-		font-size: 6px;
-
-		font-weight: bold;
-
-		letter-spacing: 1px;
+	.live-status-label {
+		color: #166534;
+		font-size: 9px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
 	}
 
-
-	.live-time strong {
+	.live-status-time {
 		margin-top: 1px;
-
-		color: #4c4439;
-
-		font-size: 10px;
+		color: #1e293b;
+		font-size: 13px;
+		font-weight: 600;
 	}
-
 
 	/* =====================================================
-	   SENIOR CARD
+	   SENIOR STATUS CARD
 	===================================================== */
 
 	.senior-card {
-		margin-bottom: 20px;
-
-		padding:
-			22px 24px;
-
+		margin-bottom: 22px;
+		padding: 20px 24px;
 		display: flex;
-
 		align-items: center;
-
 		justify-content: space-between;
-
-		gap: 25px;
-
-		border:
-			1px solid #d9d5a9;
-
-		border-radius: 22px;
-
-		background:
-			linear-gradient(
-				110deg,
-				#f1f2cb,
-				#f8edcf
-			);
-
-		box-shadow:
-			0 12px 30px
-			rgba(62,72,38,0.05);
+		gap: 20px;
+		border: 1px solid #e0e7df;
+		border-radius: 18px;
+		background: #ffffff;
+		box-shadow: 0 2px 12px rgba(15, 60, 40, 0.05);
 	}
-
 
 	.senior-main {
 		display: flex;
-
 		align-items: center;
-
-		gap: 17px;
+		gap: 16px;
 	}
-
 
 	.senior-avatar {
-		width: 66px;
-		height: 66px;
-
+		width: 58px;
+		height: 58px;
 		display: grid;
-
 		place-items: center;
-
 		flex-shrink: 0;
-
-		border-radius: 20px;
-
-		background:
-			linear-gradient(
-				145deg,
-				#176943,
-				#379259
-			);
-
+		border-radius: 16px;
+		background: linear-gradient(135deg, #10593a 0%, #1a7a51 100%);
 		color: white;
-
-		font-size: 18px;
-
-		font-weight: bold;
-
-		box-shadow:
-			0 9px 20px
-			rgba(24,104,67,0.15);
+		font-size: 20px;
+		font-weight: 700;
+		box-shadow: 0 4px 12px rgba(16, 89, 58, 0.2);
 	}
 
-
-	.eyebrow {
-		margin:
-			0 0 5px;
-
-		color: #57843d;
-
-		font-size: 8px;
-
-		font-weight: 900;
-
-		letter-spacing: 1.2px;
-	}
-
-
-	.orange {
-		color: #a86438;
-	}
-
-
-	.senior-name-row {
+	.senior-info {
 		display: flex;
-
-		align-items: center;
-
-		flex-wrap: wrap;
-
-		gap: 11px;
-	}
-
-
-	.senior-name-row h2 {
-		margin: 0;
-
-		color: #174a35;
-
-		font-size: 24px;
-	}
-
-
-	.status-pill {
-		padding:
-			5px 9px;
-
-		display: flex;
-
-		align-items: center;
-
-		gap: 5px;
-
-		border-radius: 30px;
-
-		background: #dbe8ae;
-
-		color: #3d6939;
-
-		font-size: 8px;
-
-		font-weight: bold;
-	}
-
-
-	.status-pill > span {
-		width: 6px;
-		height: 6px;
-
-		border-radius: 50%;
-
-		background: #409652;
-	}
-
-
-	.checkin {
-		margin:
-			6px 0 0;
-
-		color: #746854;
-
-		font-size: 9px;
-	}
-
-
-	.senior-actions {
-		display: flex;
-
-		align-items: center;
-
-		gap: 14px;
-	}
-
-
-	.mood-small {
-		padding-right: 15px;
-
-		display: flex;
-
-		align-items: center;
-
-		gap: 8px;
-
-		border-right:
-			1px solid #d5ca9d;
-	}
-
-
-	.mood-emoji {
-		font-size: 28px;
-	}
-
-
-	.mood-small div {
-		display: flex;
-
 		flex-direction: column;
 	}
 
+	.eyebrow {
+		margin: 0 0 4px;
+		color: #2b704c;
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.12em;
+	}
+
+	.eyebrow.orange {
+		color: #b45309;
+	}
+
+	.senior-name-row {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+
+	/* Sans-serif for all card data */
+	.senior-name-row h2 {
+		margin: 0;
+		color: #0f382a;
+		font-size: 22px;
+		font-weight: 700;
+		letter-spacing: -0.01em;
+	}
+
+	.checkin {
+		margin: 6px 0 0;
+		color: #4b5563;
+		font-size: 13px;
+	}
+
+	.checkin strong {
+		color: #1e293b;
+		font-weight: 600;
+	}
+
+	.senior-actions {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+	}
+
+	.mood-small {
+		padding-right: 16px;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		border-right: 1px solid #e2e8e0;
+	}
+
+	.mood-emoji {
+		font-size: 26px;
+	}
+
+	.mood-small div {
+		display: flex;
+		flex-direction: column;
+	}
 
 	.mood-small small {
-		color: #887d66;
-
-		font-size: 6px;
-
-		font-weight: bold;
+		color: #64748b;
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.06em;
 	}
-
 
 	.mood-small strong {
-		color: #315a3c;
-
-		font-size: 10px;
+		color: #1e293b;
+		font-size: 13px;
+		font-weight: 600;
 	}
 
-
-	.call-button {
-		min-height: 45px;
-
-		padding:
-			0 17px;
-
-		display: flex;
-
+	/* SINGLE LINE LEGIBLE CALL BUTTON */
+	.call-action-button {
+		min-height: 44px;
+		padding: 0 18px;
+		display: inline-flex;
 		align-items: center;
-
 		gap: 8px;
-
-		border-radius: 13px;
-
-		background: #176a43;
-
+		border-radius: 12px;
+		background: #116240;
 		color: white;
-
 		text-decoration: none;
-
-		font-size: 10px;
-
-		font-weight: bold;
-
-		box-shadow:
-			0 9px 20px
-			rgba(23,106,67,0.16);
-
-		transition:
-			0.18s ease;
+		font-size: 13px;
+		font-weight: 600;
+		box-shadow: 0 4px 12px rgba(17, 98, 64, 0.2);
+		transition: background 0.18s ease, transform 0.18s ease;
 	}
 
-
-	.call-button:hover {
-		transform:
-			translateY(-2px);
-
-		background: #105a37;
+	.call-action-button:hover {
+		background: #0d4e33;
+		transform: translateY(-1px);
 	}
-
-
-	.call-button span {
-		font-size: 15px;
-	}
-
 
 	/* =====================================================
-	   GRID
+	   GRID & PANELS
 	===================================================== */
 
 	.dashboard-grid {
 		display: grid;
-
-		grid-template-columns:
-			minmax(0, 1.35fr)
-			minmax(270px, 0.65fr);
-
-		gap: 18px;
+		grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+		gap: 20px;
 	}
-
 
 	.panel {
-		padding: 21px;
-
-		border:
-			1px solid #ded3b9;
-
-		border-radius: 21px;
-
-		background:
-			rgba(255,250,239,0.76);
-
-		box-shadow:
-			0 10px 28px
-			rgba(91,67,33,0.045);
+		padding: 22px;
+		border: 1px solid #e2e8e0;
+		border-radius: 18px;
+		background: #ffffff;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
 	}
-
 
 	.panel-header {
 		display: flex;
-
 		align-items: flex-start;
-
 		justify-content: space-between;
-
-		gap: 15px;
-
-		margin-bottom: 17px;
+		gap: 16px;
+		margin-bottom: 18px;
 	}
-
 
 	.panel-header.compact {
 		margin-bottom: 14px;
 	}
 
-
-	.panel-header h2,
-	.mood-panel h2 {
+	.panel-header h2 {
 		margin: 0;
-
-		color: #184a36;
-
+		color: #0f382a;
 		font-size: 18px;
-
-		line-height: 1.2;
+		font-weight: 700;
+		line-height: 1.25;
 	}
-
 
 	.panel-subtitle {
 		display: block;
-
 		margin-top: 4px;
-
-		color: #8a7963;
-
-		font-size: 8px;
+		color: #4b5563;
+		font-size: 13px;
 	}
 
-
-	.medicine-icon,
-	.call-icon,
-	.alert-icon {
-		width: 39px;
-		height: 39px;
-
+	.panel-icon {
+		width: 38px;
+		height: 38px;
 		display: grid;
-
 		place-items: center;
-
 		flex-shrink: 0;
-
-		border-radius: 12px;
-
+		border-radius: 11px;
 		font-size: 16px;
-
-		font-weight: bold;
 	}
-
 
 	.medicine-icon {
-		background: #e7ebbd;
-
-		color: #4f7a3e;
+		background: #e8f7ee;
+		color: #15803d;
 	}
-
 
 	.call-icon {
-		background: #dce9d6;
-
-		color: #287149;
+		background: #f0fdf4;
+		color: #166534;
 	}
-
 
 	.alert-icon {
-		background: #f7dfbc;
-
-		color: #a45c35;
+		background: #fef3c7;
+		color: #b45309;
 	}
 
+	.alert-icon.alert-active {
+		background: #fee2e2;
+		color: #b91c1c;
+	}
+
+	.mood-icon {
+		background: #ecfdf5;
+		color: #047857;
+	}
 
 	/* =====================================================
-	   MEDICINES
+	   MEDICATIONS LIST
 	===================================================== */
 
 	.medicine-list {
 		display: grid;
-
 		gap: 8px;
 	}
 
+	.empty-state {
+		padding: 20px;
+		text-align: center;
+		color: #64748b;
+		font-size: 13px;
+		background: #f8faf9;
+		border-radius: 12px;
+	}
 
 	.medicine-row {
-		min-height: 59px;
-
-		padding:
-			9px 11px;
-
+		min-height: 56px;
+		padding: 10px 14px;
 		display: flex;
-
 		align-items: center;
-
-		gap: 11px;
-
-		border:
-			1px solid #e3d8c0;
-
-		border-radius: 14px;
-
-		background:
-			rgba(255,255,255,0.40);
+		gap: 12px;
+		border: 1px solid #e9eee8;
+		border-radius: 12px;
+		background: #fbfdfb;
+		transition: border-color 0.15s ease;
 	}
 
+	.medicine-row:hover {
+		border-color: #cbdad0;
+	}
 
 	.medicine-check {
-		width: 34px;
-		height: 34px;
-
+		width: 30px;
+		height: 30px;
 		display: grid;
-
 		place-items: center;
-
 		flex-shrink: 0;
-
-		border-radius: 11px;
-
-		background: #f3e8d2;
-
-		color: #9b7d5b;
-
-		font-size: 13px;
-
-		font-weight: bold;
+		border-radius: 9px;
+		background: #f1f5f2;
+		color: #64748b;
+		font-size: 14px;
+		font-weight: 700;
 	}
-
 
 	.medicine-check.taken {
-		background: #dce8b6;
-
-		color: #4b7c40;
+		background: #dcfce7;
+		color: #15803d;
 	}
-
 
 	.medicine-info {
 		min-width: 0;
-
 		display: flex;
-
 		flex: 1;
-
 		flex-direction: column;
 	}
 
-
 	.medicine-info strong {
-		color: #3b4d3e;
-
-		font-size: 10px;
+		color: #1e293b;
+		font-size: 14px;
+		font-weight: 600;
 	}
 
-
-	.medicine-info span {
-		margin-top: 3px;
-
-		color: #887764;
-
-		font-size: 7px;
-	}
-
-
-	.medicine-status {
-		padding:
-			5px 8px;
-
-		border-radius: 20px;
-
-		font-size: 7px;
-
-		font-weight: bold;
-	}
-
-
-	.medicine-status.taken {
-		background: #e3edc6;
-
-		color: #4a753f;
-	}
-
-
-	.medicine-status.pending {
-		background: #f5e5bf;
-
-		color: #956333;
-	}
-
-
-	.panel-actions {
-		margin-top: 14px;
-
-		display: flex;
-
-		align-items: center;
-
-		justify-content: space-between;
-
-		gap: 12px;
-	}
-
-
-	.add-button {
-		min-height: 38px;
-
-		padding:
-			0 13px;
-
-		border: 0;
-
-		border-radius: 11px;
-
-		background: #176b44;
-
-		color: white;
-
-		cursor: pointer;
-
-		font-size: 8px;
-
-		font-weight: bold;
-	}
-
-
-	.add-button span {
-		margin-right: 4px;
-
+	.medicine-meta {
+		margin-top: 2px;
+		color: #475569;
 		font-size: 12px;
 	}
 
-
-	.text-button {
-		padding: 5px;
-
-		border: 0;
-
-		background: transparent;
-
-		color: #39724d;
-
-		cursor: pointer;
-
-		font-size: 8px;
-
-		font-weight: bold;
-	}
-
-
-	.text-button span {
-		margin-left: 5px;
-	}
-
-
-	/* =====================================================
-	   ALERT
-	===================================================== */
-
-	.alerts {
-		display: grid;
-
-		gap: 8px;
-	}
-
-
-	.alert {
-		padding:
-			12px;
-
+	.panel-actions {
+		margin-top: 18px;
 		display: flex;
-
-		align-items: flex-start;
-
-		gap: 10px;
-
-		border:
-			1px solid #eccfa8;
-
-		border-radius: 14px;
-
-		background: #fbebd2;
-	}
-
-
-	.alert-symbol {
-		width: 28px;
-		height: 28px;
-
-		display: grid;
-
-		place-items: center;
-
-		flex-shrink: 0;
-
-		border-radius: 9px;
-
-		background: #eaa36e;
-
-		color: white;
-
-		font-size: 11px;
-
-		font-weight: bold;
-	}
-
-
-	.alert strong {
-		color: #7a4d31;
-
-		font-size: 9px;
-	}
-
-
-	.alert p {
-		margin:
-			4px 0 0;
-
-		color: #8d6d58;
-
-		font-size: 7px;
-
-		line-height: 1.45;
-	}
-
-
-	.all-good {
-		padding: 14px;
-
-		display: flex;
-
-		gap: 10px;
-
 		align-items: center;
-
-		border-radius: 14px;
-
-		background: #e8efc9;
+		justify-content: space-between;
+		gap: 12px;
 	}
 
-
-	.all-good > div {
-		width: 31px;
-		height: 31px;
-
-		display: grid;
-
-		place-items: center;
-
-		border-radius: 50%;
-
-		background: #6f9b4b;
-
+	.add-button {
+		min-height: 38px;
+		padding: 0 16px;
+		border: 0;
+		border-radius: 10px;
+		background: #116240;
 		color: white;
+		cursor: pointer;
+		font-size: 13px;
+		font-weight: 600;
+		transition: background 0.15s ease;
 	}
 
-
-	.all-good strong {
-		font-size: 9px;
+	.add-button:hover {
+		background: #0d4e33;
 	}
 
-
-	.all-good p {
-		margin:
-			3px 0 0;
-
-		color: #68715d;
-
-		font-size: 7px;
-	}
-
-
-	.care-note {
-		margin-top: 13px;
-
-		padding-top: 12px;
-
-		display: flex;
-
-		gap: 8px;
-
-		border-top:
-			1px dashed #d9c9ac;
-	}
-
-
-	.care-note span {
-		color: #719443;
-
+	.add-button span {
+		margin-right: 4px;
 		font-size: 14px;
 	}
 
-
-	.care-note p {
-		margin: 0;
-
-		color: #8a7861;
-
-		font-size: 7px;
-
-		line-height: 1.5;
+	.text-button {
+		padding: 6px 10px;
+		border: 0;
+		background: transparent;
+		color: #166534;
+		cursor: pointer;
+		font-size: 13px;
+		font-weight: 600;
+		border-radius: 8px;
+		transition: background 0.15s ease;
 	}
 
+	.text-button:hover {
+		background: #f0fdf4;
+	}
 
 	/* =====================================================
-	   CALL PANEL
+	   ESCALATED ALERT PANEL
 	===================================================== */
 
-	.call-summary {
-		padding: 14px;
-
-		border:
-			1px solid #d9d9b5;
-
-		border-radius: 15px;
-
-		background:
-			linear-gradient(
-				120deg,
-				#f1f1cf,
-				#faf0d9
-			);
+	.alert-panel.has-alerts {
+		border: 1.5px solid #fcd34d;
+		border-left: 4px solid #f59e0b;
+		background: #fffdf9;
+		box-shadow: 0 4px 16px rgba(245, 158, 11, 0.08);
 	}
 
-
-	.call-top {
-		display: flex;
-
-		align-items: flex-start;
-
-		justify-content: space-between;
-
+	.alerts {
+		display: grid;
 		gap: 10px;
 	}
 
-
-	.call-top > div {
+	.alert-item {
+		padding: 12px 14px;
 		display: flex;
+		align-items: flex-start;
+		gap: 12px;
+		border: 1px solid #fde68a;
+		border-radius: 12px;
+		background: #fef3c7;
+	}
 
+	.alert-symbol {
+		width: 24px;
+		height: 24px;
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+		border-radius: 50%;
+		background: #d97706;
+		color: white;
+		font-size: 13px;
+		font-weight: 700;
+	}
+
+	.alert-body strong {
+		color: #78350f;
+		font-size: 13px;
+		font-weight: 600;
+	}
+
+	.alert-body p {
+		margin: 3px 0 0;
+		color: #92400e;
+		font-size: 12px;
+		line-height: 1.45;
+	}
+
+	.all-good {
+		padding: 14px;
+		display: flex;
+		gap: 12px;
+		align-items: center;
+		border-radius: 12px;
+		background: #f0fdf4;
+		border: 1px solid #dcfce7;
+	}
+
+	.all-good-icon {
+		width: 28px;
+		height: 28px;
+		display: grid;
+		place-items: center;
+		border-radius: 50%;
+		background: #16a34a;
+		color: white;
+		font-size: 14px;
+		font-weight: 700;
+		flex-shrink: 0;
+	}
+
+	.all-good-copy strong {
+		color: #14532d;
+		font-size: 13px;
+		font-weight: 600;
+	}
+
+	.all-good-copy p {
+		margin: 2px 0 0;
+		color: #166534;
+		font-size: 12px;
+	}
+
+	.care-note {
+		margin-top: 14px;
+		padding-top: 12px;
+		display: flex;
+		gap: 8px;
+		border-top: 1px dashed #e2e8e0;
+	}
+
+	.care-note span {
+		color: #16a34a;
+		font-size: 14px;
+	}
+
+	.care-note p {
+		margin: 0;
+		color: #4b5563;
+		font-size: 12px;
+		line-height: 1.45;
+	}
+
+	/* =====================================================
+	   CALL SUMMARY
+	===================================================== */
+
+	.call-summary {
+		padding: 16px;
+		border: 1px solid #e2e8df;
+		border-radius: 14px;
+		background: #f9fbf9;
+	}
+
+	.call-top {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	.call-time-info {
+		display: flex;
 		flex-direction: column;
 	}
 
-
-	.call-top strong {
-		color: #365641;
-
-		font-size: 10px;
+	.call-time-info strong {
+		color: #1e293b;
+		font-size: 14px;
+		font-weight: 600;
 	}
 
-
-	.call-top span {
+	.call-duration {
 		margin-top: 2px;
-
-		color: #88765f;
-
-		font-size: 7px;
+		color: #4b5563;
+		font-size: 12px;
 	}
-
-
-	.completed {
-		padding:
-			4px 7px;
-
-		border-radius: 20px;
-
-		background: #dce9b8;
-
-		color: #4b783e !important;
-
-		font-size: 7px !important;
-
-		font-weight: bold;
-	}
-
 
 	.call-tags {
-		margin-top: 11px;
-
+		margin-top: 12px;
 		display: flex;
-
 		flex-wrap: wrap;
-
 		gap: 6px;
 	}
 
-
-	.call-tags span {
-		padding:
-			5px 7px;
-
-		border-radius: 8px;
-
-		background:
-			rgba(255,255,255,0.60);
-
-		color: #627056;
-
-		font-size: 7px;
-	}
-
-
 	.summary-text {
-		margin:
-			11px 0 0;
-
-		color: #685d50;
-
-		font-size: 8px;
-
+		margin: 12px 0 0;
+		color: #334155;
+		font-size: 13px;
 		line-height: 1.55;
+		font-style: italic;
 	}
-
 
 	.wide-button {
 		width: 100%;
-
-		margin-top: 13px;
-
-		padding:
-			10px 12px;
-
+		margin-top: 14px;
+		padding: 10px 14px;
 		display: flex;
-
 		align-items: center;
-
 		justify-content: space-between;
-
-		border:
-			1px solid #d5c8aa;
-
+		border: 1px solid #d1dcd5;
 		border-radius: 11px;
-
-		background: transparent;
-
-		color: #3d704e;
-
+		background: #ffffff;
+		color: #166534;
 		cursor: pointer;
-
-		font-size: 8px;
-
-		font-weight: bold;
+		font-size: 13px;
+		font-weight: 600;
+		transition: background 0.15s ease, border-color 0.15s ease;
 	}
 
+	.wide-button:hover {
+		background: #f0fdf4;
+		border-color: #bbf7d0;
+	}
 
 	/* =====================================================
-	   MOOD
+	   WELLBEING / MOOD
 	===================================================== */
 
 	.current-mood {
-		margin-top: 17px;
-
-		padding: 14px;
-
+		margin-top: 14px;
+		padding: 14px 16px;
 		display: flex;
-
 		align-items: center;
-
-		gap: 11px;
-
-		border-radius: 15px;
-
-		background:
-			linear-gradient(
-				120deg,
-				#e8efc5,
-				#f5edcd
-			);
+		gap: 14px;
+		border-radius: 14px;
+		background: #f0fdf4;
+		border: 1px solid #dcfce7;
 	}
-
 
 	.big-emoji {
-		width: 48px;
-		height: 48px;
-
+		width: 44px;
+		height: 44px;
 		display: grid;
-
 		place-items: center;
-
-		border-radius: 14px;
-
-		background:
-			rgba(255,255,255,0.65);
-
-		font-size: 28px;
+		border-radius: 12px;
+		background: #ffffff;
+		font-size: 24px;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+		flex-shrink: 0;
 	}
 
-
-	.current-mood > div:last-child {
+	.current-mood-text {
 		display: flex;
-
 		flex-direction: column;
 	}
 
-
-	.current-mood small {
-		color: #829063;
-
-		font-size: 6px;
-
-		font-weight: bold;
+	.current-mood-text small {
+		color: #166534;
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
 	}
 
-
-	.current-mood strong {
-		color: #365e3f;
-
-		font-size: 13px;
+	.current-mood-text strong {
+		color: #0f382a;
+		font-size: 16px;
+		font-weight: 700;
 	}
 
-
-	.current-mood span {
+	.current-mood-text span {
 		margin-top: 2px;
-
-		color: #7c735f;
-
-		font-size: 6px;
+		color: #4b5563;
+		font-size: 12px;
 	}
-
 
 	.mood-history {
-		margin-top: 12px;
-
+		margin-top: 14px;
 		display: grid;
-
-		gap: 6px;
+		gap: 8px;
 	}
 
-
-	.mood-history > div {
-		padding:
-			7px 2px;
-
+	.mood-row {
+		padding: 8px 4px;
 		display: flex;
-
 		align-items: center;
-
 		justify-content: space-between;
-
-		border-bottom:
-			1px dashed #dfd1b8;
+		border-bottom: 1px dashed #e2e8e0;
 	}
 
-
-	.mood-history span {
-		color: #8d7b66;
-
-		font-size: 7px;
+	.mood-row span {
+		color: #4b5563;
+		font-size: 13px;
+		font-weight: 500;
 	}
-
-
-	.mood-history strong {
-		color: #4d664c;
-
-		font-size: 8px;
-	}
-
 
 	.mood-link {
-		margin-top: 10px;
+		margin-top: 12px;
+		display: inline-block;
 	}
 
-
 	/* =====================================================
-	   CONTACT
+	   BOTTOM BANNER — DIFFERENTIATED CHECK-IN CALLS
 	===================================================== */
 
 	.contact-card {
-		margin-top: 18px;
-
-		padding:
-			18px 21px;
-
+		margin-top: 22px;
+		padding: 22px 24px;
 		display: flex;
-
 		align-items: center;
-
 		justify-content: space-between;
-
 		gap: 20px;
-
-		border-radius: 20px;
-
-		background:
-			linear-gradient(
-				120deg,
-				#0c593b,
-				#17754b
-			);
-
+		border-radius: 18px;
+		background: linear-gradient(125deg, #093828 0%, #0f543c 100%);
 		color: white;
+		box-shadow: 0 4px 16px rgba(9, 56, 40, 0.15);
 	}
 
-
-	.contact-card > div:first-child {
+	.contact-card-content {
 		display: flex;
-
 		align-items: center;
-
-		gap: 13px;
+		gap: 16px;
 	}
-
 
 	.contact-heart {
 		width: 48px;
 		height: 48px;
-
 		display: grid;
-
 		place-items: center;
-
 		flex-shrink: 0;
-
 		border-radius: 14px;
-
 		background: #dce769;
-
-		color: #174a34;
-
-		font-size: 20px;
+		color: #143d2e;
+		font-size: 22px;
 	}
-
 
 	.contact-card .eyebrow {
 		color: #dce769;
 	}
 
-
 	.contact-card h2 {
 		margin: 0;
-
 		color: white;
-
-		font-size: 17px;
+		font-size: 18px;
+		font-weight: 700;
 	}
-
 
 	.contact-card p:not(.eyebrow) {
-		margin:
-			4px 0 0;
-
-		color:
-			rgba(255,255,255,0.66);
-
-		font-size: 8px;
+		margin: 4px 0 0;
+		color: rgba(255, 255, 255, 0.75);
+		font-size: 13px;
 	}
-
 
 	.contact-actions {
 		display: flex;
-
 		align-items: center;
-
-		gap: 8px;
+		gap: 10px;
+		flex-shrink: 0;
 	}
-
 
 	.profile-button {
-		min-height: 43px;
-
-		padding:
-			0 13px;
-
-		border:
-			1px solid
-			rgba(255,255,255,0.25);
-
-		border-radius: 12px;
-
-		background:
-			rgba(255,255,255,0.08);
-
+		min-height: 42px;
+		padding: 0 16px;
+		border: 1px solid rgba(255, 255, 255, 0.28);
+		border-radius: 11px;
+		background: rgba(255, 255, 255, 0.08);
 		color: white;
-
 		cursor: pointer;
-
-		font-size: 8px;
-
-		font-weight: bold;
+		font-size: 13px;
+		font-weight: 600;
+		transition: background 0.15s ease;
 	}
 
+	.profile-button:hover {
+		background: rgba(255, 255, 255, 0.16);
+	}
 
-	.big-call-button {
-		min-height: 46px;
-
-		padding:
-			0 15px;
-
-		display: flex;
-
+	.listen-button {
+		min-height: 42px;
+		padding: 0 18px;
+		display: inline-flex;
 		align-items: center;
-
-		gap: 9px;
-
-		border-radius: 13px;
-
+		gap: 8px;
+		border: 0;
+		border-radius: 11px;
 		background: #dce769;
-
-		color: #174832;
-
-		text-decoration: none;
-
-		transition:
-			0.18s ease;
+		color: #113b2c;
+		cursor: pointer;
+		font-size: 13px;
+		font-weight: 700;
+		transition: transform 0.18s ease, background 0.18s ease;
 	}
 
-
-	.big-call-button:hover {
-		transform:
-			translateY(-2px)
-			scale(1.02);
+	.listen-button:hover {
+		background: #e6f07a;
+		transform: translateY(-1px);
 	}
-
-
-	.big-call-button > span {
-		font-size: 18px;
-	}
-
-
-	.big-call-button > div {
-		display: flex;
-
-		flex-direction: column;
-	}
-
-
-	.big-call-button small {
-		font-size: 5px;
-
-		font-weight: bold;
-
-		letter-spacing: 1px;
-	}
-
-
-	.big-call-button strong {
-		font-size: 9px;
-	}
-
 
 	.closing {
-		margin:
-			17px 0 0;
-
+		margin: 24px 0 0;
 		text-align: center;
-
-		color: #897861;
-
-		font-size: 8px;
+		color: #64748b;
+		font-size: 12px;
 	}
 
-
 	/* =====================================================
-	   RESPONSIVE
+	   RESPONSIVE LAYOUT
 	===================================================== */
 
 	@media (max-width: 1050px) {
-
 		.app {
-			grid-template-columns:
-				205px 1fr;
+			grid-template-columns: 210px 1fr;
 		}
-
 
 		.dashboard-grid {
 			grid-template-columns: 1fr;
 		}
-
 	}
 
-
-	@media (max-width: 760px) {
-
+	@media (max-width: 768px) {
 		.app {
 			display: block;
 		}
 
-
 		.sidebar {
 			position: relative;
-
 			width: 100%;
 			height: auto;
-
-			padding:
-				17px 15px;
+			padding: 16px;
 		}
-
 
 		.care-label,
 		.mini-senior {
 			display: none;
 		}
 
-
 		nav {
-			margin-top: 15px;
-
+			margin-top: 14px;
 			display: flex;
-
 			overflow-x: auto;
+			gap: 8px;
 		}
-
 
 		.nav-item {
 			flex-shrink: 0;
 		}
 
-
 		.sidebar-bottom {
-			margin-top: 15px;
+			margin-top: 14px;
 		}
-
 
 		.profile {
 			padding-top: 10px;
 		}
 
-
 		.main {
-			padding:
-				25px 15px
-				40px;
+			padding: 24px 16px 40px;
 		}
-
 
 		.topbar {
-			align-items: center;
+			align-items: flex-start;
+			flex-direction: column;
 		}
-
-
-		.topbar h1 {
-			font-size: 35px;
-		}
-
 
 		.senior-card {
 			align-items: flex-start;
-
 			flex-direction: column;
 		}
 
-
 		.senior-actions {
 			width: 100%;
-
 			justify-content: space-between;
 		}
 
-
 		.contact-card {
 			align-items: flex-start;
-
 			flex-direction: column;
 		}
-
 
 		.contact-actions {
 			width: 100%;
 		}
-
 	}
 
-
 	@media (max-width: 480px) {
-
-		.live-time {
-			display: none;
-		}
-
-
 		.senior-actions {
 			align-items: stretch;
-
 			flex-direction: column;
 		}
 
-
 		.mood-small {
-			padding:
-				0 0 10px;
-
+			padding: 0 0 10px;
 			border-right: 0;
-
-			border-bottom:
-				1px solid #d5ca9d;
+			border-bottom: 1px solid #e2e8e0;
 		}
 
-
-		.call-button {
+		.call-action-button {
 			justify-content: center;
 		}
-
 
 		.panel-actions {
 			align-items: stretch;
-
 			flex-direction: column;
 		}
-
 
 		.contact-actions {
 			align-items: stretch;
-
 			flex-direction: column;
 		}
 
-
-		.big-call-button {
+		.listen-button,
+		.profile-button {
 			justify-content: center;
 		}
-
 	}
-
 </style>
