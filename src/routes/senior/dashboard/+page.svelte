@@ -312,6 +312,62 @@
 		}
 	}
 
+	function scrollToSection(id) {
+		const el = document.getElementById(id);
+		if (el) {
+			el.scrollIntoView({ behavior: 'smooth' });
+		}
+	}
+
+	async function logout() {
+		await supabase.auth.signOut();
+		goto('/');
+	}
+
+	/* =====================================================
+	   SOS PANIC BUTTON
+	===================================================== */
+	let sosState = $state(null); // null | 'calling' | 'sent' | 'error'
+	let sosMessage = $state('');
+
+	async function triggerSOS() {
+		// Find caregiver phone from caregivers array or profile.emergency_contact_phone
+		const cgPhone = caregivers.find(c => c.phone)?.phone || '';
+		if (!cgPhone) {
+			sosState = 'error';
+			sosMessage = 'No caregiver phone found. Please add a caregiver in your care circle.';
+			setTimeout(() => { sosState = null; sosMessage = ''; }, 5000);
+			return;
+		}
+
+		sosState = 'calling';
+		sosMessage = 'Alerting your caregiver now...';
+
+		try {
+			const response = await fetch('/api/bland-call', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					phoneNumber: cgPhone,
+					seniorName: senior.firstName,
+					seniorId: userId,
+					routineName: 'SOS Emergency',
+					category: 'sos'
+				})
+			});
+			const data = await response.json();
+			if (response.ok && data.success) {
+				sosState = 'sent';
+				sosMessage = 'Your caregiver has been alerted! Help is on the way. 📞';
+			} else {
+				throw new Error(data.error || 'Call failed');
+			}
+		} catch (err) {
+			sosState = 'error';
+			sosMessage = 'Could not reach caregiver. Please call them directly.';
+		}
+		setTimeout(() => { sosState = null; sosMessage = ''; }, 8000);
+	}
 	// Computed alerts
 	let alerts = $derived(
 		medicines
@@ -1215,6 +1271,97 @@
 
 		</main>
 
+	</div>
+
+	<!-- HELP MODAL -->
+	{#if helpOpen}
+		<div class="help-overlay" onclick={(e) => { if (e.target === e.currentTarget) helpOpen = false; }} role="dialog" aria-modal="true" tabindex="-1">
+			<div class="help-card">
+				<header class="help-header">
+					<div>
+						<p class="help-eyebrow">ABOUT VCARE</p>
+						<h2>How Vcare Cares for You</h2>
+					</div>
+					<button class="modal-close" onclick={() => helpOpen = false}>×</button>
+				</header>
+
+				<div class="help-body">
+					<div class="help-item">
+						<div class="help-icon">☎</div>
+						<div>
+							<strong>Daily AI Phone Calls</strong>
+							<p>Vcare calls your phone automatically to ask about your medicines, health, and daily mood.</p>
+						</div>
+					</div>
+
+					<div class="help-item">
+						<div class="help-icon">💊</div>
+						<div>
+							<strong>Medicine Reminders</strong>
+							<p>You and your caregiver can schedule prescriptions. When Vcare calls, you can simply confirm you took them.</p>
+						</div>
+					</div>
+
+					<div class="help-item">
+						<div class="help-icon">♡</div>
+						<div>
+							<strong>Care Circle & Emergency Alerts</strong>
+							<p>If you miss medications or feel unwell, Vcare automatically alerts your trusted family or caregiver.</p>
+						</div>
+					</div>
+				</div>
+
+				<footer class="help-footer">
+					<button class="btn-help-close" onclick={() => helpOpen = false}>Got it, thank you!</button>
+				</footer>
+			</div>
+		</div>
+	{/if}
+
+	<!-- =====================================================
+	     SOS FLOATING PANIC BUTTON
+	===================================================== -->
+	<div class="sos-container">
+		{#if sosMessage}
+			<div class="sos-toast" class:sos-toast-sent={sosState === 'sent'} class:sos-toast-error={sosState === 'error'}>
+				<span class="sos-toast-icon">{sosState === 'calling' ? '⏳' : sosState === 'sent' ? '✓' : '⚠️'}</span>
+				<p class="sos-toast-text">{sosMessage}</p>
+			</div>
+		{/if}
+
+		<button
+			class="sos-button"
+			class:sos-calling={sosState === 'calling'}
+			class:sos-sent={sosState === 'sent'}
+			onclick={triggerSOS}
+			disabled={sosState === 'calling'}
+			aria-label="Emergency SOS - Alert Caregiver"
+			title="Press to alert your caregiver immediately"
+		>
+			<div class="sos-pulse-ring"></div>
+			<div class="sos-pulse-ring ring-delay"></div>
+			<span class="sos-icon" aria-hidden="true">🚨</span>
+			<div class="sos-labels">
+				<span class="sos-title">
+					{#if sosState === 'calling'}
+						Alerting...
+					{:else if sosState === 'sent'}
+						Caregiver Alerted!
+					{:else}
+						SOS Help
+					{/if}
+				</span>
+				<span class="sos-subtitle">
+					{#if sosState === 'calling'}
+						Calling now
+					{:else if sosState === 'sent'}
+						Help notified
+					{:else}
+						Call caregiver
+					{/if}
+				</span>
+			</div>
+		</button>
 	</div>
 
 
@@ -3608,7 +3755,7 @@
     font-size: 12px;
     font-weight: 700;
     color: #0d7249;
-}
+  }
 
 /* 2026 senior experience refresh */
 :global(body) {
@@ -3707,5 +3854,174 @@
 	.content { width: min(94%, 720px); }
 }
 
+	/* =========================================================
+	   SOS FLOATING PANIC BUTTON
+	   ========================================================= */
+	.sos-container {
+		position: fixed;
+		bottom: 28px;
+		right: 28px;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 12px;
+		z-index: 1000;
+	}
+
+	.sos-toast {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		background: #ffffff;
+		border: 1.5px solid #e11d48;
+		box-shadow: 0 8px 28px rgba(225, 29, 72, 0.2);
+		border-radius: 14px;
+		padding: 12px 16px;
+		max-width: 320px;
+		animation: sosSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+	}
+
+	.sos-toast.sos-toast-sent {
+		border-color: #0b6845;
+		box-shadow: 0 8px 28px rgba(11, 104, 69, 0.2);
+	}
+
+	.sos-toast.sos-toast-error {
+		border-color: #d97706;
+		box-shadow: 0 8px 28px rgba(217, 119, 6, 0.2);
+	}
+
+	.sos-toast-icon {
+		font-size: 20px;
+		flex-shrink: 0;
+	}
+
+	.sos-toast-text {
+		margin: 0;
+		font-size: 13px;
+		font-weight: 600;
+		color: #1f2937;
+		line-height: 1.4;
+	}
+
+	.sos-button {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+		color: #ffffff;
+		border: none;
+		border-radius: 9999px;
+		padding: 12px 22px 12px 16px;
+		cursor: pointer;
+		box-shadow: 0 6px 20px rgba(225, 29, 72, 0.4), 0 2px 6px rgba(0,0,0,0.1);
+		transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+		outline: none;
+	}
+
+	.sos-button:hover:not(:disabled) {
+		transform: translateY(-2px) scale(1.03);
+		box-shadow: 0 10px 28px rgba(225, 29, 72, 0.5), 0 3px 8px rgba(0,0,0,0.15);
+	}
+
+	.sos-button:active:not(:disabled) {
+		transform: translateY(0) scale(0.98);
+	}
+
+	.sos-button.sos-calling {
+		background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+		box-shadow: 0 6px 20px rgba(217, 119, 6, 0.4);
+		cursor: wait;
+	}
+
+	.sos-button.sos-sent {
+		background: linear-gradient(135deg, #059669 0%, #047857 100%);
+		box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
+	}
+
+	.sos-pulse-ring {
+		position: absolute;
+		inset: -5px;
+		border-radius: 9999px;
+		border: 2px solid #e11d48;
+		opacity: 0;
+		animation: sosPulse 2.4s infinite ease-out;
+		pointer-events: none;
+	}
+
+	.sos-pulse-ring.ring-delay {
+		animation-delay: 1.2s;
+	}
+
+	.sos-calling .sos-pulse-ring {
+		border-color: #f59e0b;
+		animation-duration: 1.2s;
+	}
+
+	.sos-icon {
+		font-size: 24px;
+		line-height: 1;
+		flex-shrink: 0;
+	}
+
+	.sos-labels {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		text-align: left;
+	}
+
+	.sos-title {
+		font-size: 15px;
+		font-weight: 800;
+		letter-spacing: 0.02em;
+		line-height: 1.1;
+	}
+
+	.sos-subtitle {
+		font-size: 11px;
+		opacity: 0.9;
+		font-weight: 500;
+	}
+
+	@keyframes sosPulse {
+		0% {
+			transform: scale(0.95);
+			opacity: 0.8;
+		}
+		60% {
+			transform: scale(1.22);
+			opacity: 0;
+		}
+		100% {
+			transform: scale(1.3);
+			opacity: 0;
+		}
+	}
+
+	@keyframes sosSlideUp {
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	@media (max-width: 640px) {
+		.sos-container {
+			bottom: 18px;
+			right: 18px;
+		}
+		.sos-button {
+			padding: 10px 18px 10px 14px;
+		}
+		.sos-title {
+			font-size: 14px;
+		}
+	}
 
 </style>

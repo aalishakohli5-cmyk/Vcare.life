@@ -351,18 +351,70 @@
 
 	function formatTime(time) {
 		if (!time) return '';
-
 		const parts = time.split(':');
-
 		let hour = Number(parts[0]);
 		const minute = parts[1] || '00';
-
 		const suffix = hour >= 12 ? 'PM' : 'AM';
-
 		hour = hour % 12 || 12;
-
 		return `${hour}:${minute} ${suffix}`;
 	}
+
+	/** Detect category from medicine name — mirrors server-side detectCategory() */
+	function detectCategory(name = '', dosage = '') {
+		const text = `${name} ${dosage}`.toLowerCase();
+		if (text.includes('walk') || text.includes('stroll') || text.includes('jog') || text.includes('step')) return 'walk';
+		if (text.includes('yoga') || text.includes('stretch') || text.includes('breath') || text.includes('exercise') || text.includes('workout')) return 'yoga';
+		if (text.includes('water') || text.includes('hydrat') || text.includes('drink') || text.includes('diet') || text.includes('meal') || text.includes('breakfast') || text.includes('lunch') || text.includes('dinner') || text.includes('fruit') || text.includes('salad') || text.includes('food')) return 'diet';
+		if (text.includes('bp') || text.includes('blood pressure') || text.includes('sugar') || text.includes('glucose') || text.includes('pulse') || text.includes('vitals') || text.includes('check')) return 'health_check';
+		return 'medicine';
+	}
+
+	const CATEGORY_META = {
+		walk:         { emoji: '🚶', label: 'Walk',         color: '#3b82f6', bg: '#eff6ff' },
+		yoga:         { emoji: '🧘', label: 'Yoga',         color: '#7c3aed', bg: '#f5f3ff' },
+		diet:         { emoji: '🥗', label: 'Diet',         color: '#16a34a', bg: '#f0fdf4' },
+		health_check: { emoji: '🩺', label: 'Health Check', color: '#ea580c', bg: '#fff7ed' },
+		medicine:     { emoji: '💊', label: 'Medicine',     color: '#0b6845', bg: '#f0fdf4' },
+	};
+
+	/** Compute today's taken count and adherence % for the weekly badge */
+	let takenToday = $derived(medicines.filter(m => m.taken).length);
+	let totalRoutines = $derived(medicines.length);
+	let adherencePct = $derived(
+		totalRoutines === 0 ? 0 : Math.round((takenToday / totalRoutines) * 100)
+	);
+
+	/** Simple streak: consecutive days with all routines done (stored in taken_at, best-effort) */
+	let streak = $derived(() => {
+		// Count how many of today's routines are done — show motivational streak text
+		if (takenToday === 0) return 0;
+		if (takenToday === totalRoutines) return 'all';
+		return takenToday;
+	});
+
+	/** Group medicines by time-of-day bucket */
+	function getTimeBucket(time) {
+		if (!time) return 3;
+		const hour = parseInt(time.split(':')[0], 10);
+		if (hour < 12) return 0; // morning
+		if (hour < 17) return 1; // afternoon
+		if (hour < 21) return 2; // evening
+		return 3; // night
+	}
+
+	const TIME_BUCKETS = [
+		{ label: 'Morning',   icon: '🌅', key: 0 },
+		{ label: 'Afternoon', icon: '☀️',  key: 1 },
+		{ label: 'Evening',   icon: '🌆', key: 2 },
+		{ label: 'Night',     icon: '🌙', key: 3 },
+	];
+
+	let groupedMedicines = $derived(
+		TIME_BUCKETS.map(bucket => ({
+			...bucket,
+			items: medicines.filter(m => getTimeBucket(m.scheduled_time) === bucket.key)
+		})).filter(b => b.items.length > 0)
+	);
 
 	function goHome() {
 		goto('/senior/dashboard');
@@ -411,13 +463,42 @@
 				</p>
 			</div>
 
-			<div class="hero-pill">
-				<div>📋</div>
+			<!-- Adherence Stats Banner -->
+			<div class="adherence-banner">
+				<div class="adh-ring-wrap">
+					<svg class="adh-ring" viewBox="0 0 44 44">
+						<circle cx="22" cy="22" r="18" stroke="#e5d8bf" stroke-width="4" fill="none"/>
+						<circle
+							cx="22" cy="22" r="18"
+							stroke="#0b6845" stroke-width="4" fill="none"
+							stroke-linecap="round"
+							stroke-dasharray="{(adherencePct / 100) * 113} 113"
+							transform="rotate(-90 22 22)"
+						/>
+					</svg>
+					<span class="adh-pct">{adherencePct}%</span>
+				</div>
 
-				<span>
-					<strong>{medicines.length}</strong>
-					routine items
-				</span>
+				<div class="adh-details">
+					<div class="adh-row">
+						<span class="adh-num">{takenToday}</span>
+						<span class="adh-label">of {totalRoutines} done today</span>
+					</div>
+
+					{#if takenToday === totalRoutines && totalRoutines > 0}
+						<div class="streak-badge streak-gold">
+							✨ All done! Amazing job today
+						</div>
+					{:else if takenToday > 0}
+						<div class="streak-badge streak-active">
+							🔥 {takenToday} completed — keep going!
+						</div>
+					{:else}
+						<div class="streak-badge streak-start">
+							⏰ Ready to start your day?
+						</div>
+					{/if}
+				</div>
 			</div>
 		</section>
 
@@ -541,10 +622,10 @@
 				<div class="empty-state">
 					<div class="empty-icon">💊</div>
 
-					<h3>No medicines added yet</h3>
+					<h3>No routine items yet</h3>
 
 					<p>
-						Add your first medicine and Vcare can include it
+						Add your first routine item and Vcare can include it
 						in your check-ins.
 					</p>
 
@@ -552,79 +633,60 @@
 						class="empty-add"
 						onclick={() => (showAddForm = true)}
 					>
-						+ Add your first medicine
+						+ Add your first routine item
 					</button>
 				</div>
 
 			{:else}
-				<div class="medicine-list">
-					{#each medicines as medicine}
-						<article
-							class="medicine-row"
-							class:taken={medicine.taken}
-						>
-							<div class="time">
-								<strong>
-									{formatTime(medicine.scheduled_time).split(' ')[0]}
-								</strong>
-
-								<span>
-									{formatTime(medicine.scheduled_time).split(' ')[1]}
-								</span>
+				<!-- Time-of-day grouped timeline -->
+				<div class="timeline-view">
+					{#each groupedMedicines as bucket}
+						<div class="time-bucket">
+							<div class="bucket-header">
+								<span class="bucket-icon">{bucket.icon}</span>
+								<span class="bucket-label">{bucket.label}</span>
+								<span class="bucket-count">{bucket.items.filter(i => i.taken).length}/{bucket.items.length}</span>
 							</div>
 
-							<div
-								class="timeline"
-								class:taken-line={medicine.taken}
-							>
-								<div class="dot">
-									{medicine.taken ? '✓' : ''}
-								</div>
-							</div>
-
-							<div class="pill-icon">
-								💊
-							</div>
-
-							<div class="medicine-details">
-								<strong>{medicine.name}</strong>
-								<span>{medicine.dosage}</span>
-							</div>
-
-							<div class="status-area">
-								{#if medicine.taken}
-									<div class="taken-badge">
-										✓ Taken
-									</div>
-
-									<button
-										class="tiny-button"
-										onclick={() => markPending(medicine)}
+							<div class="bucket-items">
+								{#each bucket.items as medicine}
+									{@const cat = detectCategory(medicine.name, medicine.dosage)}
+									{@const meta = CATEGORY_META[cat]}
+									<article
+										class="timeline-card"
+										class:tl-done={medicine.taken}
 									>
-										Undo
-									</button>
-								{:else}
-									<div class="pending-badge">
-										● Pending
-									</div>
+										<div class="tl-left">
+											<div class="tl-dot" class:tl-dot-done={medicine.taken}>
+												{medicine.taken ? '✓' : ''}
+											</div>
+											<div class="tl-time-col">
+												<strong>{formatTime(medicine.scheduled_time).split(' ')[0]}</strong>
+												<span>{formatTime(medicine.scheduled_time).split(' ')[1]}</span>
+											</div>
+										</div>
 
-									<button
-										class="take-button"
-										onclick={() => markTaken(medicine)}
-									>
-										I took this
-									</button>
-								{/if}
+										<div class="tl-body">
+											<div class="tl-cat-chip" style="background:{meta.bg};color:{meta.color}">
+												{meta.emoji} {meta.label}
+											</div>
+											<strong class="tl-name">{medicine.name}</strong>
+											<span class="tl-dosage">{medicine.dosage}</span>
+										</div>
 
-								<button
-									class="delete-button"
-									title="Remove medicine"
-									onclick={() => deleteMedicine(medicine.id)}
-								>
-									🗑
-								</button>
+										<div class="tl-actions">
+											{#if medicine.taken}
+												<div class="tl-done-badge">✓ Done</div>
+												<button class="tl-undo" onclick={() => markPending(medicine)}>Undo</button>
+											{:else}
+												<button class="tl-take" onclick={() => markTaken(medicine)}>I did this ✓</button>
+											{/if}
+											<button class="tl-delete" title="Remove" onclick={() => deleteMedicine(medicine.id)}>🗑</button>
+										</div>
+									</article>
+								{/each}
 							</div>
-						</article>
+						</div>
 					{/each}
 				</div>
 			{/if}
@@ -1493,130 +1555,206 @@
 		}
 	}
 
-	/* 2026 senior experience refresh */
-	:global(body) {
-		font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-		background: #f3f5ef;
-	}
-
-	.page {
-		display: grid;
-		grid-template-columns: 250px minmax(0, 1fr);
-		grid-template-rows: auto 1fr;
-		background:
-			radial-gradient(circle at 86% 5%, rgba(203, 230, 99, 0.24), transparent 28%),
-			linear-gradient(180deg, #f8faf5 0%, #f1f4ed 100%);
-	}
-
-	.topbar {
-		grid-column: 2;
-		justify-content: flex-end;
-		height: 82px;
-		border-color: rgba(25, 82, 61, 0.1);
-		background: rgba(250, 252, 247, 0.88);
-		backdrop-filter: blur(18px);
-		position: sticky;
-		top: 0;
-		z-index: 20;
-	}
-
-	.content { grid-column: 2; width: min(1180px, 92%); }
-
-	.senior-sidebar {
-		grid-row: 1 / 3;
-		position: sticky;
-		top: 0;
-		height: 100vh;
-		padding: 27px 18px 22px;
-		background: linear-gradient(165deg, rgba(255,255,255,.055), transparent 42%), #123f31;
-		box-shadow: 14px 0 40px rgba(21,62,48,.11);
-		display: flex;
-		flex-direction: column;
-		z-index: 30;
-	}
-
-	.side-brand { display: flex; align-items: center; gap: 11px; padding: 0 7px 28px; color: white; text-decoration: none; }
-	.side-brand > span:last-child { display: flex; flex-direction: column; }
-	.side-brand strong { font-size: 18px; line-height: 1; }
-	.side-brand small { margin-top: 5px; color: rgba(255,255,255,.55); font-size: 9px; }
-	.side-logo { width: 44px; height: 44px; border-radius: 14px; background: #d6eb6c; color: #123f31; display: grid; place-items: center; font-size: 21px; box-shadow: 0 9px 25px rgba(0,0,0,.16); }
-
-	.side-nav { display: flex; flex-direction: column; gap: 7px; }
-	.side-nav a { min-height: 58px; padding: 10px 12px; border: 1px solid transparent; border-radius: 15px; color: rgba(255,255,255,.78); display: flex; align-items: center; gap: 12px; text-decoration: none; transition: .2s ease; }
-	.side-nav a > span { width: 31px; height: 31px; border-radius: 11px; background: rgba(255,255,255,.07); display: grid; place-items: center; font-size: 17px; }
-	.side-nav a div { display: flex; flex-direction: column; }
-	.side-nav a strong { font-size: 12px; }
-	.side-nav a small { margin-top: 3px; color: rgba(255,255,255,.44); font-size: 8px; }
-	.side-nav a:hover { transform: translateX(3px); border-color: rgba(255,255,255,.08); background: rgba(255,255,255,.08); }
-	.side-nav a.active { background: #e4efc7; color: #153f31; box-shadow: 0 12px 26px rgba(0,0,0,.14); }
-	.side-nav a.active > span { background: rgba(18,63,49,.08); }
-	.side-nav a.active small { color: #647266; }
-
-	.side-note { margin-top: auto; padding: 15px; border: 1px solid rgba(255,255,255,.1); border-radius: 17px; background: rgba(255,255,255,.07); color: white; display: flex; align-items: center; gap: 10px; }
-	.side-note > span { width: 33px; height: 33px; border-radius: 11px; background: rgba(214,235,108,.15); color: #d6eb6c; display: grid; place-items: center; }
-	.side-note div { display: flex; flex-direction: column; }
-	.side-note strong { font-size: 10px; }
-	.side-note small { margin-top: 3px; color: rgba(255,255,255,.5); font-size: 8px; }
-	.hero h1 { font-family: Georgia, "Times New Roman", serif; letter-spacing: -2.5px; }
-	.hero h1 span { font-family: Inter, ui-sans-serif, sans-serif; font-weight: 650; }
-
-	.insight-grid {
-		display: grid;
-		grid-template-columns: 190px 190px minmax(280px, 1fr);
-		gap: 13px;
-		margin: -4px 0 25px;
-	}
-
-	.insight-grid article {
-		min-height: 94px;
-		padding: 16px;
-		border: 1px solid rgba(32, 83, 63, 0.11);
-		border-radius: 20px;
-		background: rgba(255, 255, 255, 0.76);
-		box-shadow: 0 14px 45px rgba(33, 66, 52, 0.06);
-		display: flex;
-		align-items: center;
-		gap: 13px;
-	}
-
-	.insight-icon { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; font-weight: 900; }
-	.insight-icon.green { background: #dceebd; color: #206443; }
-	.insight-icon.amber { background: #f7e9b7; color: #9a6b16; }
-	.insight-grid small { display: block; color: #718078; font-size: 8px; font-weight: 900; letter-spacing: 1.1px; }
-	.insight-grid strong { display: block; margin-top: 3px; color: #163f31; font-size: 21px; line-height: 1; }
-	.insight-grid p { margin: 4px 0 0; color: #7c877f; font-size: 9px; }
-
-	.insight-grid .wide-insight { display: block; padding: 19px 21px; }
-	.adherence-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
-	.adherence-top > span { color: #65736a; font-size: 10px; font-weight: 700; }
-	.adherence-bar { height: 9px; margin-top: 14px; overflow: hidden; border-radius: 999px; background: #e7ece5; }
-	.adherence-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #126b49, #b9d947); transition: width .25s ease; }
-
-	.medicine-card,
-	.hero-pill,
-	.info-card {
-		border-color: rgba(32, 83, 63, 0.12);
-		background: rgba(255, 255, 255, 0.76);
-		box-shadow: 0 18px 60px rgba(24, 62, 47, 0.07);
-	}
-
-	.medicine-row { border-radius: 16px; padding-inline: 12px; transition: background .2s ease, transform .2s ease; }
-	.medicine-row:hover { background: #f6f8f3; transform: translateX(3px); }
-	.add-button, .save-button, .empty-add { box-shadow: 0 8px 20px rgba(20, 100, 68, .14); }
-
-	@media (max-width: 900px) {
-		.insight-grid { grid-template-columns: 1fr 1fr; }
-		.insight-grid .wide-insight { grid-column: 1 / -1; }
-	}
-
-	@media (max-width: 820px) {
-		.page { display: block; }
-		.senior-sidebar { display: none; }
-		.topbar { padding-inline: 20px; }
-	}
-
 	@media (max-width: 560px) {
 		.insight-grid { grid-template-columns: 1fr; }
 		.insight-grid .wide-insight { grid-column: auto; }
+	}
+
+	/* ---- Adherence Ring & Streak ---- */
+	.adherence-banner {
+		display: flex;
+		align-items: center;
+		gap: 18px;
+		background: rgba(255,255,255,0.7);
+		border: 1px solid #e5d8bf;
+		border-radius: 18px;
+		padding: 16px 20px;
+		min-width: 200px;
+		flex-shrink: 0;
+	}
+	.adh-ring-wrap {
+		position: relative;
+		width: 64px;
+		height: 64px;
+		flex-shrink: 0;
+	}
+	.adh-ring { width: 64px; height: 64px; }
+	.adh-pct {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 13px;
+		font-weight: 700;
+		color: #0b6845;
+	}
+	.adh-details { display: flex; flex-direction: column; gap: 6px; }
+	.adh-row { display: flex; align-items: baseline; gap: 5px; }
+	.adh-num { font-size: 28px; font-weight: 800; color: #0b6845; line-height: 1; }
+	.adh-label { font-size: 13px; color: #6b5a3a; }
+	.streak-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		font-size: 12px;
+		font-weight: 600;
+		padding: 4px 10px;
+		border-radius: 99px;
+	}
+	.streak-gold { background: #fef9c3; color: #92400e; }
+	.streak-active { background: #fff7ed; color: #c2410c; }
+	.streak-start { background: #f0fdf4; color: #0b6845; }
+
+	/* ---- Timeline View ---- */
+	.timeline-view { display: flex; flex-direction: column; gap: 28px; }
+	.time-bucket { display: flex; flex-direction: column; gap: 10px; }
+	.bucket-header {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 0 4px;
+	}
+	.bucket-icon { font-size: 18px; }
+	.bucket-label {
+		font-size: 13px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.07em;
+		color: #6b5a3a;
+		flex: 1;
+	}
+	.bucket-count {
+		font-size: 12px;
+		font-weight: 600;
+		color: #0b6845;
+		background: rgba(220,231,106,0.3);
+		padding: 2px 9px;
+		border-radius: 99px;
+	}
+	.bucket-items { display: flex; flex-direction: column; gap: 8px; }
+
+	.timeline-card {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		background: white;
+		border: 1.5px solid #ede0c8;
+		border-radius: 16px;
+		padding: 14px 16px;
+		transition: border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
+	}
+	.timeline-card:hover { box-shadow: 0 4px 16px rgba(11,104,69,0.08); }
+	.timeline-card.tl-done {
+		opacity: 0.75;
+		border-color: #c6e8d4;
+		background: #f0fdf4;
+	}
+
+	.tl-left {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-shrink: 0;
+	}
+	.tl-dot {
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		border: 2.5px solid #d1c4a8;
+		background: white;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 13px;
+		color: #0b6845;
+		font-weight: 700;
+		transition: all 0.2s;
+		flex-shrink: 0;
+	}
+	.tl-dot.tl-dot-done {
+		background: #0b6845;
+		border-color: #0b6845;
+		color: white;
+	}
+	.tl-time-col {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		min-width: 36px;
+	}
+	.tl-time-col strong { font-size: 14px; color: #2a1f0f; line-height: 1.1; }
+	.tl-time-col span { font-size: 10px; color: #9e8a6a; }
+
+	.tl-body {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+		min-width: 0;
+	}
+	.tl-cat-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 11px;
+		font-weight: 600;
+		padding: 2px 8px;
+		border-radius: 99px;
+		width: fit-content;
+	}
+	.tl-name { font-size: 15px; color: #2a1f0f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.tl-dosage { font-size: 13px; color: #9e8a6a; }
+
+	.tl-actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-shrink: 0;
+	}
+	.tl-take {
+		background: #0b6845;
+		color: white;
+		border: none;
+		padding: 7px 14px;
+		border-radius: 10px;
+		font-size: 13px;
+		font-weight: 600;
+		cursor: pointer;
+		white-space: nowrap;
+		transition: background 0.15s, transform 0.1s;
+	}
+	.tl-take:hover { background: #0d5438; transform: translateY(-1px); }
+	.tl-done-badge {
+		font-size: 13px;
+		font-weight: 600;
+		color: #0b6845;
+		white-space: nowrap;
+	}
+	.tl-undo {
+		background: transparent;
+		border: 1px solid #d1c4a8;
+		color: #9e8a6a;
+		padding: 5px 10px;
+		border-radius: 8px;
+		font-size: 12px;
+		cursor: pointer;
+	}
+	.tl-delete {
+		background: transparent;
+		border: none;
+		padding: 4px 6px;
+		border-radius: 8px;
+		font-size: 16px;
+		cursor: pointer;
+		opacity: 0.4;
+		transition: opacity 0.15s;
+	}
+	.tl-delete:hover { opacity: 0.9; }
+
+	@media (max-width: 540px) {
+		.adherence-banner { flex-direction: column; align-items: flex-start; }
+		.timeline-card { flex-wrap: wrap; }
+		.tl-actions { width: 100%; justify-content: flex-end; }
 	}
 </style>

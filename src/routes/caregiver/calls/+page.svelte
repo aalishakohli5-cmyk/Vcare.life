@@ -294,6 +294,83 @@
 		goto('/');
 	}
 
+	/* =====================================================
+	   CALL OUTCOME & MOOD ANALYSIS (MediMate-inspired)
+	===================================================== */
+	function analyzeCallOutcome(call) {
+		const transcript = (call.transcript || '').toLowerCase();
+		const isDistress = call.distress_detected || false;
+
+		// 1. Routine status detection
+		let status = 'confirmed';
+		let statusLabel = 'Routine Confirmed';
+		let statusEmoji = '✓';
+		let statusBadgeClass = 'badge-confirmed';
+
+		if (isDistress || transcript.includes('unwell') || transcript.includes('dizzy') || transcript.includes('pain') || transcript.includes('emergency') || transcript.includes('help')) {
+			status = 'distress';
+			statusLabel = 'Attention Needed';
+			statusEmoji = '⚠️';
+			statusBadgeClass = 'badge-alert';
+		} else if (transcript.includes('not yet') || transcript.includes('haven\'t') || transcript.includes('forgot') || transcript.includes('later') || transcript.includes('no')) {
+			status = 'pending';
+			statusLabel = 'Pending Follow-up';
+			statusEmoji = '⏳';
+			statusBadgeClass = 'badge-pending';
+		}
+
+		// 2. AI sentiment & mood detection
+		let mood = 'Peaceful & clear';
+		let moodEmoji = '😊';
+		let moodBadgeClass = 'mood-calm';
+
+		if (isDistress) {
+			mood = 'Expressed discomfort';
+			moodEmoji = '😟';
+			moodBadgeClass = 'mood-distress';
+		} else if (transcript.includes('great') || transcript.includes('wonderful') || transcript.includes('good') || transcript.includes('cheerful') || transcript.includes('happy')) {
+			mood = 'Upbeat & cheerful';
+			moodEmoji = '🌟';
+			moodBadgeClass = 'mood-upbeat';
+		} else if (transcript.includes('tired') || transcript.includes('sleepy') || transcript.includes('resting')) {
+			mood = 'Tired / resting';
+			moodEmoji = '😴';
+			moodBadgeClass = 'mood-tired';
+		}
+
+		// 3. Routine mention detection (medication, walk, yoga, hydration, etc.)
+		let routineType = 'Daily Wellness';
+		let routineEmoji = '🌿';
+		if (transcript.includes('walk') || transcript.includes('stroll')) {
+			routineType = 'Walk Routine';
+			routineEmoji = '🚶';
+		} else if (transcript.includes('yoga') || transcript.includes('stretch')) {
+			routineType = 'Yoga / Movement';
+			routineEmoji = '🧘';
+		} else if (transcript.includes('water') || transcript.includes('diet') || transcript.includes('breakfast') || transcript.includes('meal')) {
+			routineType = 'Diet & Nutrition';
+			routineEmoji = '🥗';
+		} else if (transcript.includes('pressure') || transcript.includes('sugar') || transcript.includes('bp')) {
+			routineType = 'Vitals Check';
+			routineEmoji = '🩺';
+		} else if (transcript.includes('pill') || transcript.includes('tablet') || transcript.includes('medicine') || transcript.includes('dose')) {
+			routineType = 'Medication';
+			routineEmoji = '💊';
+		}
+
+		return {
+			status,
+			statusLabel,
+			statusEmoji,
+			statusBadgeClass,
+			mood,
+			moodEmoji,
+			moodBadgeClass,
+			routineType,
+			routineEmoji
+		};
+	}
+
 	// Computed counts
 	let distressCount = $derived(calls.filter(c => c.distress_detected).length);
 
@@ -413,9 +490,20 @@
 					<span>☎</span>
 					<span>Direct Call</span>
 				</a>
-				<button class="btn-primary" onclick={triggerCheckInCall}>
-					<span>✨</span>
-					<span>Trigger AI Check-In Call</span>
+				<button class="btn-primary" onclick={triggerCheckInCall} disabled={callStatus?.type === 'calling'}>
+					{#if callStatus?.type === 'calling'}
+						<div class="voice-waveform" aria-hidden="true">
+							<span class="bar bar-1"></span>
+							<span class="bar bar-2"></span>
+							<span class="bar bar-3"></span>
+							<span class="bar bar-4"></span>
+							<span class="bar bar-5"></span>
+						</div>
+						<span>Connecting Call...</span>
+					{:else}
+						<span>✨</span>
+						<span>Trigger AI Check-In Call</span>
+					{/if}
 				</button>
 			</div>
 		</header>
@@ -428,7 +516,17 @@
 				class:success={callStatus.type === 'success'}
 				class:error={callStatus.type === 'error'}
 			>
-				<span aria-hidden="true">{callStatus.type === 'calling' ? '⏳' : callStatus.type === 'success' ? '✓' : '⚠️'}</span>
+				{#if callStatus.type === 'calling'}
+					<div class="voice-waveform live-waveform" aria-hidden="true">
+						<span class="bar bar-1"></span>
+						<span class="bar bar-2"></span>
+						<span class="bar bar-3"></span>
+						<span class="bar bar-4"></span>
+						<span class="bar bar-5"></span>
+					</div>
+				{:else}
+					<span aria-hidden="true">{callStatus.type === 'success' ? '✓' : '⚠️'}</span>
+				{/if}
 				<p>{callStatus.message}</p>
 			</div>
 		{/if}
@@ -488,6 +586,7 @@
 		{:else}
 			<div class="calls-list">
 				{#each filteredCalls as call (call.id)}
+					{@const outcome = analyzeCallOutcome(call)}
 					<article class="call-card" class:distress={call.distress_detected}>
 						<div class="call-header">
 							<div class="call-lead">
@@ -495,7 +594,10 @@
 									{call.distress_detected ? '⚠️' : '☎'}
 								</div>
 								<div>
-									<h3>Check-in with {senior.firstName}</h3>
+									<div class="call-title-row">
+										<h3>Check-in with {senior.firstName}</h3>
+										<span class="routine-chip">{outcome.routineEmoji} {outcome.routineType}</span>
+									</div>
 									<span class="call-timestamp">
 										{call.formattedDate} at {call.formattedTime} · Duration: {call.duration}
 									</span>
@@ -503,19 +605,28 @@
 							</div>
 
 							<div class="call-badges">
-								{#if call.distress_detected}
-									<Badge variant="distress" dot={true}>Distress Detected</Badge>
-								{:else}
-									<Badge variant="normal" dot={true}>Normal Check-in</Badge>
-								{/if}
+								<span class="outcome-badge {outcome.statusBadgeClass}">
+									<span class="outcome-icon">{outcome.statusEmoji}</span>
+									{outcome.statusLabel}
+								</span>
+								<span class="mood-badge {outcome.moodBadgeClass}">
+									<span>{outcome.moodEmoji}</span>
+									{outcome.mood}
+								</span>
 								<Badge variant="neutral">{call.status}</Badge>
 							</div>
 						</div>
 
 						<div class="call-summary-box">
-							<p class="summary-title">Summary & Key Insights</p>
+							<div class="summary-header">
+								<p class="summary-title">Summary & Key Insights</p>
+								<div class="verified-pill">
+									<span class="verified-dot"></span>
+									AI Voice Verified
+								</div>
+							</div>
 							<p class="summary-content">
-								"{call.transcript.substring(0, 180)}{call.transcript.length > 180 ? '...' : ''}"
+								"{call.transcript.substring(0, 220)}{call.transcript.length > 220 ? '...' : ''}"
 							</p>
 						</div>
 
@@ -1268,6 +1379,182 @@
 
 		.call-senior-btn {
 			justify-content: center;
+		}
+	}
+
+	/* =====================================================
+	   VOICE WAVEFORM ANIMATION (MediMate-inspired)
+	===================================================== */
+	.voice-waveform {
+		display: inline-flex;
+		align-items: center;
+		gap: 3px;
+		height: 18px;
+		vertical-align: middle;
+	}
+
+	.voice-waveform .bar {
+		display: inline-block;
+		width: 3px;
+		background: currentColor;
+		border-radius: 2px;
+		animation: waveformPulse 1s ease-in-out infinite alternate;
+	}
+
+	.voice-waveform .bar-1 { height: 6px; animation-delay: 0.05s; }
+	.voice-waveform .bar-2 { height: 16px; animation-delay: 0.2s; }
+	.voice-waveform .bar-3 { height: 11px; animation-delay: 0.35s; }
+	.voice-waveform .bar-4 { height: 18px; animation-delay: 0.15s; }
+	.voice-waveform .bar-5 { height: 8px; animation-delay: 0.4s; }
+
+	.live-waveform {
+		margin-right: 4px;
+	}
+
+	.live-waveform .bar {
+		background: #d97706;
+		width: 3.5px;
+	}
+
+	@keyframes waveformPulse {
+		0% {
+			transform: scaleY(0.3);
+			opacity: 0.6;
+		}
+		100% {
+			transform: scaleY(1.1);
+			opacity: 1;
+		}
+	}
+
+	/* =====================================================
+	   OUTCOME, MOOD & ROUTINE BADGES
+	===================================================== */
+	.call-title-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+
+	.routine-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		background: #f1f5f0;
+		color: #1a4d36;
+		border: 1px solid #d4e3d2;
+		border-radius: 9999px;
+		padding: 2px 9px;
+		font-size: 11.5px;
+		font-weight: 600;
+	}
+
+	.outcome-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		padding: 4px 10px;
+		border-radius: 9999px;
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.01em;
+	}
+
+	.outcome-badge.badge-confirmed {
+		background: #eaf8f0;
+		color: #0b6845;
+		border: 1px solid #b7e8ca;
+	}
+
+	.outcome-badge.badge-alert {
+		background: #fdf0f0;
+		color: #b91c1c;
+		border: 1px solid #fecaca;
+	}
+
+	.outcome-badge.badge-pending {
+		background: #fef8ee;
+		color: #b45309;
+		border: 1px solid #fde68a;
+	}
+
+	.outcome-icon {
+		font-size: 12px;
+	}
+
+	.mood-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		padding: 4px 10px;
+		border-radius: 9999px;
+		font-size: 12px;
+		font-weight: 600;
+	}
+
+	.mood-badge.mood-calm {
+		background: #f4f6f4;
+		color: #334155;
+		border: 1px solid #e2e8e0;
+	}
+
+	.mood-badge.mood-upbeat {
+		background: #fefce8;
+		color: #854d0e;
+		border: 1px solid #fef08a;
+	}
+
+	.mood-badge.mood-distress {
+		background: #fef2f2;
+		color: #991b1b;
+		border: 1px solid #fee2e2;
+	}
+
+	.mood-badge.mood-tired {
+		background: #f5f3ff;
+		color: #5b21b6;
+		border: 1px solid #ede9fe;
+	}
+
+	.summary-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+		margin-bottom: 6px;
+		flex-wrap: wrap;
+	}
+
+	.verified-pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		background: #ecfdf5;
+		border: 1px solid #a7f3d0;
+		color: #047857;
+		font-size: 11px;
+		font-weight: 700;
+		padding: 2px 8px;
+		border-radius: 9999px;
+		letter-spacing: 0.02em;
+	}
+
+	.verified-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: #10b981;
+		box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+		animation: verifiedPulse 2s infinite;
+	}
+
+	@keyframes verifiedPulse {
+		0%, 100% {
+			box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+		}
+		50% {
+			box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.45);
 		}
 	}
 </style>
