@@ -3,7 +3,6 @@
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
-	import { startSampleCall } from '$lib/senior/sampleCall';
 
 	let senior = $state({
 		firstName: 'User',
@@ -12,13 +11,19 @@
 		email: ''
 	});
 
+	let currentDate = $state('');
+	let currentTime = $state('');
+	let timezone = $state('');
+	let profileOpen = $state(false);
+	let helpOpen = $state(false);
+	let mood = $state('good');
+
 	let medicines = $state([]);
 	let recentCalls = $state([]);
 	let loadingMedicines = $state(true);
 	let loadingCalls = $state(true);
 	let medicinesError = $state('');
 	let callsError = $state('');
-	let mood = $state('good');
 
 	let reminders = $state([
 		{
@@ -56,6 +61,8 @@
 	let pendingMedicine = $state(null);
 
 	onMount(async () => {
+		timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 		const {
 			data: { session }
 		} = await supabase.auth.getSession();
@@ -237,10 +244,34 @@
 			loadingCalls = false;
 		}
 
+		// Start live date/time
+		updateClock();
+		const clock = setInterval(updateClock, 1000);
+
 		return () => {
+			clearInterval(clock);
 			medicationSubscription.unsubscribe();
 		};
 	});
+
+	function updateClock() {
+		const now = new Date();
+
+		currentDate = new Intl.DateTimeFormat('en-IN', {
+			weekday: 'long',
+			day: 'numeric',
+			month: 'long',
+			year: 'numeric',
+			timeZone: timezone
+		}).format(now);
+
+		currentTime = new Intl.DateTimeFormat('en-IN', {
+			hour: 'numeric',
+			minute: '2-digit',
+			hour12: true,
+			timeZone: timezone
+		}).format(now);
+	}
 
 	function setMood(value) {
 		mood = value;
@@ -294,22 +325,55 @@
 	}
 
 	async function takeSampleCall() {
+		if (!seniorPhone) {
+			sampleCallMessage = 'No phone number found for this account. Please update your profile.';
+			return;
+		}
+
 		isCalling = true;
 		sampleCallMessage = 'Starting your Vcare check-in call...';
 
 		try {
-			await startSampleCall({
-				phone: seniorPhone || senior.phone,
-				firstName: senior.firstName,
-				userId,
-				pendingMedicine
+			const response = await fetch('/api/bland-call', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					phoneNumber: seniorPhone,
+					seniorName: senior.firstName,
+					seniorId: userId,
+					medicationId: pendingMedicine?.id || null,
+					medicationName: pendingMedicine?.name || 'daily health check-in',
+					dosage: pendingMedicine?.dosage || 'prescribed dose'
+				})
 			});
-			sampleCallMessage = 'Vcare is calling you now.';
+
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(data.error || 'Could not start the call');
+			}
+
+			sampleCallMessage = 'Vcare is calling you now! 📞';
 		} catch (error) {
+			console.error('Call error:', error);
 			sampleCallMessage = error.message || 'Could not start the call. Please try again.';
 		} finally {
 			isCalling = false;
 		}
+	}
+
+	function scrollToSection(id) {
+		const el = document.getElementById(id);
+		if (el) {
+			el.scrollIntoView({ behavior: 'smooth' });
+		}
+	}
+
+	async function logout() {
+		await supabase.auth.signOut();
+		goto('/');
 	}
 
 	// Computed alerts
@@ -572,12 +636,12 @@
 				</div>
 
 
-				<div class="welcome-badge" role="status" aria-label="Vcare status: You are all set">
-					<span class="status-mark" aria-hidden="true">✓</span>
+				<div class="welcome-badge">
+					<span>♥</span>
 
 					<div>
-						<small>Vcare status</small>
-						<strong>You’re all set</strong>
+						<small>YOUR VCARE</small>
+						<strong>Everything looks good</strong>
 					</div>
 				</div>
 
@@ -590,6 +654,29 @@
 			     =================================================== -->
 
 			<section class="call-banner">
+
+
+				<div class="call-phone">
+
+					<div class="phone-top"></div>
+
+					<div class="phone-display">
+						<small>VCARE CALLING</small>
+
+						<strong>Hello there!</strong>
+
+						<span>♡</span>
+					</div>
+
+					<div class="phone-controls">
+						<div class="answer">☎</div>
+						<div class="center-button">•</div>
+						<div class="decline">×</div>
+					</div>
+
+				</div>
+
+
 				<div class="call-info">
 
 					<p class="lime-label">
@@ -907,7 +994,7 @@
 						</div>
 
 
-						<button class="outline-button" onclick={() => goto('/senior/reminder')}>
+						<button class="outline-button" onclick={() => goto('/senior/medications')}>
 							＋ Add reminder
 						</button>
 
@@ -921,7 +1008,7 @@
 						<!-- medicine items -->
 
 						{#each medicines as med}
-							<div class="timeline-row" class:complete-row={med.status === 'taken'} class:upcoming-row={med.status !== 'taken'}>
+							<div class="timeline-row">
 
 								<div class="timeline-time">
 									<strong>{med.time.split(' ')[0]}</strong>
@@ -950,7 +1037,7 @@
 
 						{#each reminders as reminder}
 
-							<div class="timeline-row" class:complete-row={reminder.status === 'done'} class:upcoming-row={reminder.status === 'upcoming'}>
+							<div class="timeline-row">
 
 								<div class="timeline-time">
 
@@ -1017,7 +1104,7 @@
 
 						<!-- VCARE call -->
 
-						<div class="timeline-row upcoming-row">
+						<div class="timeline-row">
 
 							<div class="timeline-time">
 								<strong>6:00</strong>
@@ -1046,7 +1133,7 @@
 					</div>
 
 
-					<button class="wide-link" onclick={() => goto('/senior/reminder')}>
+					<button class="wide-link" onclick={() => goto('/senior/medications')}>
 						View & edit all reminders
 						<span>→</span>
 					</button>
@@ -1166,15 +1253,195 @@
 					</div>
 
 
-					<button type="button" class="wide-link call-action" onclick={takeSampleCall} disabled={isCalling} aria-describedby="sample-call-feedback">
-						{isCalling ? 'Starting your sample call…' : 'Take a sample call now'}
-						<span aria-hidden="true">{isCalling ? '☎' : '→'}</span>
+					<button class="wide-link" onclick={takeSampleCall}>
+						Take a sample call now
+						<span>→</span>
 					</button>
 
-					{#if sampleCallMessage}
-						<p id="sample-call-feedback" class="call-action-message" role="status" aria-live="polite">
-							{sampleCallMessage}
+				</article>
+
+			</section>
+
+
+
+			<!-- ===================================================
+			     LOWER GRID
+			     =================================================== -->
+
+			<section class="lower-grid">
+
+
+				<!-- CARE CIRCLE -->
+
+				<article class="panel care-panel" id="care-section">
+
+					<div class="panel-header">
+
+						<div>
+							<p class="section-label">
+								YOUR PEOPLE
+							</p>
+
+							<h2>Your Care Circle</h2>
+
+							<span class="panel-subtitle">
+								People you trust and want to keep close.
+							</span>
+						</div>
+
+
+						<div class="panel-icon care-icon">
+							♡
+						</div>
+
+					</div>
+
+
+					<div class="caregiver-list">
+
+						{#if caregivers.length === 0}
+							<div class="empty-inline-state">
+								<p>No contacts configured yet. Add your emergency contact in your profile.</p>
+							</div>
+						{:else}
+							{#each caregivers as caregiver}
+
+								<div class="caregiver-row">
+
+									<div class="caregiver-avatar">
+										{caregiver.initial}
+									</div>
+
+
+									<div class="caregiver-info">
+
+										<div class="caregiver-name">
+
+											<strong>
+												{caregiver.name}
+											</strong>
+
+											{#if caregiver.primary}
+												<span>
+													Primary
+												</span>
+											{/if}
+
+										</div>
+
+										<p>
+											{caregiver.relation}
+										</p>
+
+									</div>
+
+
+									<a
+										class="call-caregiver"
+										href={`tel:${caregiver.phone}`}
+										aria-label={`Call ${caregiver.name}`}
+									>
+										☎
+									</a>
+
+								</div>
+
+							{/each}
+						{/if}
+
+					</div>
+
+
+					<div class="care-note">
+						<span>♡</span>
+
+						<p>
+							Vcare can keep your chosen people
+							informed when something needs their attention.
 						</p>
+					</div>
+
+
+					<button class="wide-link" onclick={() => profileOpen = true}>
+						View profile & care circle
+						<span>→</span>
+					</button>
+
+				</article>
+
+
+
+				<!-- ALERTS -->
+
+				<article class="panel alerts-panel" id="alerts-section">
+
+					<div class="panel-header">
+
+						<div>
+							<p class="section-label">
+								IMPORTANT
+							</p>
+
+							<h2>Things needing attention</h2>
+
+							<span class="panel-subtitle">
+								Only what matters right now.
+							</span>
+						</div>
+
+
+						<div class="panel-icon alert-icon">
+							!
+						</div>
+
+					</div>
+
+
+					{#if alerts.length > 0}
+
+						<div class="alerts-list">
+
+							{#each alerts as alert}
+
+								<div class="alert-card">
+
+									<div class="alert-symbol">
+										!
+									</div>
+
+
+									<div>
+										<strong>
+											{alert.title}
+										</strong>
+
+										<p>
+											{alert.message}
+										</p>
+									</div>
+
+								</div>
+
+							{/each}
+
+						</div>
+
+					{:else}
+
+						<div class="all-good">
+							<span>✓</span>
+
+							<div>
+								<strong>
+									You're all caught up.
+								</strong>
+
+								<p>
+									Nothing needs your attention right now.
+								</p>
+							</div>
+						</div>
+
 					{/if}
 
 				</article>
@@ -1216,6 +1483,53 @@
 		</main>
 
 	</div>
+
+	<!-- HELP MODAL -->
+	{#if helpOpen}
+		<div class="help-overlay" onclick={(e) => { if (e.target === e.currentTarget) helpOpen = false; }} role="dialog" aria-modal="true" tabindex="-1">
+			<div class="help-card">
+				<header class="help-header">
+					<div>
+						<p class="help-eyebrow">ABOUT VCARE</p>
+						<h2>How Vcare Cares for You</h2>
+					</div>
+					<button class="modal-close" onclick={() => helpOpen = false}>×</button>
+				</header>
+
+				<div class="help-body">
+					<div class="help-item">
+						<div class="help-icon">☎</div>
+						<div>
+							<strong>Daily AI Phone Calls</strong>
+							<p>Vcare calls your phone automatically to ask about your medicines, health, and daily mood.</p>
+						</div>
+					</div>
+
+					<div class="help-item">
+						<div class="help-icon">💊</div>
+						<div>
+							<strong>Medicine Reminders</strong>
+							<p>You and your caregiver can schedule prescriptions. When Vcare calls, you can simply confirm you took them.</p>
+						</div>
+					</div>
+
+					<div class="help-item">
+						<div class="help-icon">♡</div>
+						<div>
+							<strong>Care Circle & Emergency Alerts</strong>
+							<p>If you miss medications or feel unwell, Vcare automatically alerts your trusted family or caregiver.</p>
+						</div>
+					</div>
+				</div>
+
+				<footer class="help-footer">
+					<button class="btn-help-close" onclick={() => helpOpen = false}>Got it, thank you!</button>
+				</footer>
+			</div>
+		</div>
+	{/if}
+
+</div>
 
 
 
@@ -1959,34 +2273,30 @@
 
 
 	.welcome-badge {
-		padding: 11px 16px 11px 11px;
+		padding: 12px 15px;
 
-		border: 1px solid #d8e5c8;
-		border-radius: 999px;
+		border: 1px solid #dfd0b2;
+		border-radius: 16px;
 
-		background: rgba(255, 255, 255, 0.88);
+		background: #fffaf0;
 
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		box-shadow: 0 10px 28px rgba(28, 72, 52, 0.07);
+		gap: 10px;
 	}
 
 
-	.welcome-badge > .status-mark {
-		width: 38px;
-		height: 38px;
-		flex: 0 0 38px;
+	.welcome-badge > span {
+		width: 32px;
+		height: 32px;
 
-		border-radius: 50%;
+		border-radius: 10px;
 
-		background: #e2f0c5;
-		color: #39713d;
+		background: #eff3ca;
+		color: #5c873e;
 
 		display: grid;
 		place-items: center;
-		font-size: 18px !important;
-		font-weight: 800;
 	}
 
 
@@ -1997,21 +2307,19 @@
 
 
 	.welcome-badge small {
-		font-size: 13px !important;
-		line-height: 1.15 !important;
-		letter-spacing: 0.2px;
+		font-size: 6px;
+		letter-spacing: 1px;
 
-		color: #728075;
+		color: #8a7d68;
 	}
 
 
 	.welcome-badge strong {
-		margin-top: 2px;
+		margin-top: 3px;
 
-		font-size: 16px !important;
-		line-height: 1.2 !important;
+		font-size: 9px;
 
-		color: #254c38;
+		color: #40583f;
 	}
 
 
@@ -2041,7 +2349,7 @@
 		color: white;
 
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) 280px;
+		grid-template-columns: 110px 1fr 280px;
 		align-items: center;
 		gap: 28px;
 
@@ -2077,6 +2385,109 @@
 		color: rgba(216, 231, 80, 0.19);
 
 		font-size: 52px;
+	}
+
+
+	.call-phone {
+		position: relative;
+		z-index: 2;
+
+		width: 95px;
+		height: 155px;
+
+		padding: 12px 9px;
+
+		border: 5px solid #688e32;
+		border-radius: 22px;
+
+		background: #a7ca3c;
+
+		transform: rotate(-4deg);
+	}
+
+
+	.phone-top {
+		width: 38px;
+		height: 6px;
+
+		margin: 0 auto 9px;
+
+		border-radius: 10px;
+
+		background: #587730;
+	}
+
+
+	.phone-display {
+		height: 78px;
+
+		border: 4px solid #35623a;
+		border-radius: 11px;
+
+		background: #ddeb50;
+		color: #17442d;
+
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+	}
+
+
+	.phone-display small {
+		font-size: 5px;
+		font-weight: bold;
+	}
+
+
+	.phone-display strong {
+		font-size: 10px;
+		margin-top: 3px;
+	}
+
+
+	.phone-display span {
+		font-size: 17px;
+	}
+
+
+	.phone-controls {
+		margin-top: 9px;
+
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 7px;
+	}
+
+
+	.phone-controls div {
+		width: 19px;
+		height: 19px;
+
+		border-radius: 50%;
+
+		display: grid;
+		place-items: center;
+
+		font-size: 7px;
+	}
+
+
+	.answer {
+		background: #198b58;
+	}
+
+
+	.center-button {
+		background: #f5efd8;
+
+		color: #52713b;
+	}
+
+
+	.decline {
+		background: #ea5e45;
 	}
 
 
@@ -2296,10 +2707,9 @@
 
 		margin-top: 6px;
 
-		color: #465b50;
+		color: #827562;
 
-		font-size: 18px !important;
-		line-height: 1.45 !important;
+		font-size: 9px;
 	}
 
 
@@ -2637,26 +3047,12 @@
 
 
 	.timeline-row {
-		min-height: 82px;
-		margin: 7px 0;
-		padding: 10px 14px;
-		border: 1px solid transparent;
-		border-radius: 16px;
+		min-height: 67px;
 
 		display: grid;
-		grid-template-columns: 68px 20px 50px minmax(0, 1fr) auto;
+		grid-template-columns: 55px 18px 39px 1fr auto;
 		align-items: center;
-		gap: 12px;
-	}
-
-	.timeline-row.complete-row {
-		border-color: #cfe4c2;
-		background: #f0f8e9;
-	}
-
-	.timeline-row.upcoming-row {
-		border-color: #eadb9a;
-		background: #fff8dc;
+		gap: 9px;
 	}
 
 
@@ -2669,14 +3065,12 @@
 
 
 	.timeline-time strong {
-		font-size: 17px !important;
-		line-height: 1.2 !important;
+		font-size: 11px;
 	}
 
 
 	.timeline-time span {
-		font-size: 15px !important;
-		line-height: 1.25 !important;
+		font-size: 7px;
 	}
 
 
@@ -2741,15 +3135,15 @@
 
 
 	.timeline-icon {
-		width: 46px;
-		height: 46px;
+		width: 36px;
+		height: 36px;
 
 		border-radius: 12px;
 
 		display: grid;
 		place-items: center;
 
-		font-size: 20px;
+		font-size: 15px;
 	}
 
 
@@ -2782,44 +3176,32 @@
 
 
 	.timeline-content strong {
-		font-size: 18px !important;
-		line-height: 1.3 !important;
-		color: #173f31;
+		font-size: 10px;
 	}
 
 
 	.timeline-content span {
 		margin-top: 4px;
 
-		color: #756955;
+		color: #887b68;
 
-		font-size: 16px !important;
-		line-height: 1.35 !important;
+		font-size: 7px;
 	}
 
 
 	.timeline-status {
-		min-width: 112px;
-		padding: 8px 12px;
-		border-radius: 999px;
-		font-size: 15px !important;
-		line-height: 1.2 !important;
-		font-weight: 800;
-		text-align: center;
+		font-size: 8px;
+		font-weight: bold;
 	}
 
 
 	.timeline-status.done {
-		border: 1px solid #bcd9ae;
-		background: #dcefd1;
-		color: #285f34;
+		color: #4f8548;
 	}
 
 
 	.timeline-status.upcoming {
-		border: 1px solid #e5cf78;
-		background: #ffedaa;
-		color: #765514;
+		color: #b48427;
 	}
 
 
@@ -2840,11 +3222,8 @@
 		font-weight: bold;
 
 		display: flex;
-		align-items: center;
 		justify-content: center;
 		gap: 8px;
-		text-decoration: none;
-		cursor: pointer;
 	}
 
 
@@ -2859,7 +3238,7 @@
 
 
 	.call-row {
-		padding: 18px 14px;
+		padding: 15px 0;
 
 		border-top: 1px solid #eadfc9;
 
@@ -2874,8 +3253,8 @@
 
 
 	.call-status-icon {
-		width: 48px;
-		height: 48px;
+		width: 39px;
+		height: 39px;
 
 		flex-shrink: 0;
 
@@ -2887,7 +3266,7 @@
 		display: grid;
 		place-items: center;
 
-		font-size: 19px;
+		font-size: 13px;
 	}
 
 
@@ -2918,32 +3297,28 @@
 
 
 	.call-row-top strong {
-		font-size: 18px !important;
-		line-height: 1.3 !important;
-		color: #163e31;
+		font-size: 10px;
 	}
 
 
 	.call-row-top > div > span {
 		margin-top: 3px;
 
-		color: #4f6257;
+		color: #887b68;
 
-		font-size: 16px !important;
-		line-height: 1.35 !important;
+		font-size: 7px;
 	}
 
 
 	.call-badge {
-		padding: 7px 11px;
+		padding: 5px 8px;
 
 		border-radius: 8px;
 
 		background: #e6efce;
 		color: #477243;
 
-		font-size: 14px !important;
-		font-weight: 800;
+		font-size: 7px;
 	}
 
 
@@ -2960,10 +3335,9 @@
 		align-items: center;
 		gap: 5px;
 
-		color: #46594f;
+		color: #796d5c;
 
-		font-size: 16px !important;
-		line-height: 1.4 !important;
+		font-size: 7px;
 	}
 
 
@@ -2975,57 +3349,9 @@
 	.call-row-content p {
 		margin: 6px 0 0;
 
-		color: #293f35;
+		color: #4f6755;
 
-		font-size: 17px !important;
-		line-height: 1.5 !important;
-	}
-
-	.calls-panel .empty-inline-state {
-		margin-top: 16px;
-		padding: 24px;
-		border: 1px solid #d9e2cf;
-		border-radius: 16px;
-		background: #f5f8ef;
-	}
-
-	.calls-panel .empty-inline-state p {
-		margin: 0;
-		color: #293f35;
-		font-size: 18px !important;
-		line-height: 1.55 !important;
-	}
-
-	.calls-panel .call-action {
-		min-height: 56px;
-		padding: 14px 18px;
-		border: 1px solid #0f633f;
-		border-radius: 14px;
-		background: #176e48;
-		color: #fff;
-		font-size: 18px !important;
-		box-shadow: 0 10px 24px rgba(20, 93, 63, 0.18);
-	}
-
-	.calls-panel .call-action:hover:not(:disabled) {
-		background: #0f5c3c;
-	}
-
-	.calls-panel .call-action:disabled {
-		opacity: 0.7;
-		cursor: wait;
-	}
-
-	.call-action-message {
-		margin: 12px 0 0;
-		padding: 12px 14px;
-		border-radius: 12px;
-		background: #eaf3dd;
-		color: #244b36;
-		font-size: 17px !important;
-		font-weight: 700;
-		line-height: 1.45 !important;
-		text-align: center;
+		font-size: 8px;
 	}
 
 
@@ -3253,9 +3579,7 @@
 
 
 	.all-good strong {
-		font-size: 18px !important;
-		line-height: 1.3 !important;
-		color: #244b36;
+		font-size: 9px;
 	}
 
 
@@ -3360,7 +3684,7 @@
 
 
 		.call-banner {
-			grid-template-columns: 1fr;
+			grid-template-columns: 90px 1fr;
 		}
 
 
@@ -3471,6 +3795,17 @@
 		}
 
 
+		.call-phone {
+			width: 75px;
+			height: 120px;
+		}
+
+
+		.phone-display {
+			height: 57px;
+		}
+
+
 		.call-info h2 {
 			font-size: 26px;
 		}
@@ -3542,9 +3877,7 @@
 		.timeline-status {
 			grid-column: 4;
 
-			min-width: 0;
-			margin-top: -4px;
-			justify-self: start;
+			margin-top: -8px;
 		}
 
 
@@ -3608,103 +3941,6 @@
     font-size: 12px;
     font-weight: 700;
     color: #0d7249;
-}
-
-/* 2026 senior experience refresh */
-:global(body) {
-	font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-	background: #f2f5ef;
-}
-
-.app {
-	grid-template-columns: 272px minmax(0, 1fr);
-	background:
-		radial-gradient(circle at 84% 4%, rgba(202, 231, 96, .22), transparent 28%),
-		linear-gradient(180deg, #f8faf6 0%, #eff3ec 100%);
-}
-
-.sidebar {
-	padding: 26px 20px;
-	border-right: 0;
-	background:
-		linear-gradient(165deg, rgba(255,255,255,.05), transparent 42%),
-		#123f31;
-	box-shadow: 14px 0 40px rgba(21, 62, 48, .10);
-}
-
-.brand { padding: 0 7px 27px; }
-.brand .logo { background: #d6eb6c; color: #123f31; box-shadow: 0 9px 25px rgba(0,0,0,.16); }
-.brand-copy strong { color: #fff; font-size: 19px; }
-.brand-copy span { color: rgba(255,255,255,.58); }
-.main-nav { gap: 7px; }
-.nav-link { min-height: 58px; color: rgba(255,255,255,.78); border: 1px solid transparent; }
-.nav-link small { color: rgba(255,255,255,.46); }
-.nav-link:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.08); transform: translateX(3px); }
-.nav-link.active { background: #e4efc7; color: #153f31; box-shadow: 0 12px 26px rgba(0,0,0,.13); }
-.nav-link.active small { color: #647266; }
-.nav-icon { border-radius: 11px; background: rgba(255,255,255,.07); }
-.nav-link.active .nav-icon { background: rgba(18,63,49,.08); }
-
-.sample-card {
-	border-color: rgba(255,255,255,.12);
-	background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
-	box-shadow: none;
-}
-.sample-copy p, .sample-copy h3, .sample-copy span, .sample-message { color: rgba(255,255,255,.82); }
-.sample-copy p { color: #d6eb6c; }
-.sample-button { background: #d6eb6c; color: #123f31; }
-.sidebar-footer { color: rgba(255,255,255,.5); }
-
-.topbar {
-	height: 82px;
-	border-color: rgba(25,82,61,.09);
-	background: rgba(250,252,247,.86);
-	backdrop-filter: blur(18px);
-}
-.help { background: white; border-color: rgba(25,82,61,.12); box-shadow: 0 8px 24px rgba(27,65,50,.06); }
-.profile { padding: 5px 7px 5px 5px; border-radius: 16px; transition: background .2s ease; }
-.profile:hover { background: rgba(18,63,49,.06); }
-.avatar { background: #d6eb6c; box-shadow: 0 6px 16px rgba(92,122,43,.16); }
-
-.content { width: min(1280px, 92%); padding-top: 36px; }
-.welcome { align-items: center; }
-.welcome h1 { font-family: Georgia, "Times New Roman", serif; letter-spacing: -2.8px; }
-.welcome h1 span { font-family: Inter, ui-sans-serif, sans-serif; font-weight: 650; }
-.welcome-badge { border-color: rgba(25,82,61,.11); background: rgba(255,255,255,.74); box-shadow: 0 14px 44px rgba(27,65,50,.07); }
-
-.call-banner {
-	border: 1px solid rgba(255,255,255,.12);
-	background:
-		radial-gradient(circle at 87% 8%, rgba(213,235,108,.18), transparent 30%),
-		linear-gradient(135deg, #0f6647 0%, #118457 60%, #0e714c 100%);
-	box-shadow: 0 26px 60px rgba(13,91,61,.18);
-}
-
-.panel {
-	border-color: rgba(32,83,63,.11);
-	background: rgba(255,255,255,.78);
-	box-shadow: 0 18px 56px rgba(24,62,47,.07);
-	transition: transform .22s ease, box-shadow .22s ease;
-}
-.panel:hover { transform: translateY(-2px); box-shadow: 0 24px 65px rgba(24,62,47,.11); }
-.medicine-row, .timeline-row, .call-row { border-radius: 15px; transition: background .2s ease; }
-.medicine-row:hover, .timeline-row:hover, .call-row:hover { background: #f5f8f2; }
-.medicine-action, .outline-button, .wide-link, .add-button { transition: transform .18s ease, box-shadow .18s ease; }
-.medicine-action:hover, .outline-button:hover, .add-button:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(20,93,63,.13); }
-.moods button { border-color: rgba(31,83,62,.12); background: #fbfcf9; }
-.moods button.chosen { background: #edf4d8; box-shadow: inset 0 0 0 1px rgba(37,100,69,.16); }
-.closing-card { background: linear-gradient(135deg, #e6f0cf, #f8f5e9); border-color: rgba(32,83,63,.11); }
-
-@media (max-width: 1020px) {
-	.app { grid-template-columns: 224px minmax(0,1fr); }
-	.sidebar { padding-inline: 14px; }
-}
-
-@media (max-width: 820px) {
-	.app { display: block; }
-	.sidebar { display: none; }
-	.topbar { padding-inline: 20px; }
-	.content { width: min(94%, 720px); }
 }
 
 

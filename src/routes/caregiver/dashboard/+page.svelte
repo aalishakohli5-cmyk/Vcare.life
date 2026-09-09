@@ -389,8 +389,6 @@
 	/>
 </svelte:head>
 
-<div class="app">
-
 <div class="app" data-caregiver-portal>
 
 	<!-- =====================================================

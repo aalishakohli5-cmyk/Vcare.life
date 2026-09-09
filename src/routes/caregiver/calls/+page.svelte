@@ -2,11 +2,9 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
-	import { chooseCareRecipient } from '$lib/careConnections';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import Badge from '$lib/components/Badge.svelte';
 	import MetricCard from '$lib/components/MetricCard.svelte';
-	import '../theme.css';
 
 	/* =====================================================
 	   STATE
@@ -103,12 +101,37 @@
 				}
 			}
 
+			if ((!seniors || seniors.length === 0) && profile?.emergency_contact_name) {
+				if (profile.emergency_contact_phone) {
+					try {
+						const { data: matched } = await supabase
+							.from('profiles')
+							.select('*')
+							.eq('phone', profile.emergency_contact_phone)
+							.maybeSingle();
+						if (matched) {
+							seniors = [matched];
+						}
+					} catch (e) {
+						console.warn('Matching senior by phone error:', e);
+					}
+				}
+
+				if (!seniors || seniors.length === 0) {
+					seniors = [{
+						id: user.id,
+						full_name: profile.emergency_contact_name,
+						phone: profile.emergency_contact_phone || '',
+						role: 'senior'
+					}];
+				}
+			}
 		} catch (err) {
 			console.error('Supabase direct senior query error:', err);
 		}
 
 		if (seniors && seniors.length > 0) {
-			const firstSenior = chooseCareRecipient(seniors);
+			const firstSenior = seniors[0];
 			senior.id = firstSenior.id;
 			senior.name = firstSenior.full_name || 'Senior';
 			senior.firstName = (firstSenior.full_name || 'Senior').split(' ')[0];
@@ -310,7 +333,7 @@
 	<title>Vcare Calls with {senior.firstName} — Vcare.life</title>
 </svelte:head>
 
-<div class="app" data-caregiver-portal>
+<div class="app">
 
 	<!-- SIDEBAR -->
 	<aside class="sidebar">
@@ -358,18 +381,12 @@
 				</span>
 				<span>Senior Profile</span>
 			</a>
-			<a href="/caregiver/settings" class="nav-item">
-				<span class="nav-icon">⚙</span>
-				<span>Settings</span>
-			</a>
 		</nav>
 
 		<div class="sidebar-bottom">
 			<a href="/caregiver/senior" class="mini-senior">
 				<div class="mini-avatar">{senior.initials}</div>
 				<div class="mini-senior-info">
-				<div class="mini-avatar" aria-hidden="true">♡</div>
-				<div>
 					<small>CARING FOR</small>
 					<strong>{senior.name}</strong>
 				</div>
