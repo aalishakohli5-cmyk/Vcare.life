@@ -329,8 +329,6 @@
 		<div class="sidebar-bottom">
 			<div class="mini-senior">
 				<div class="mini-avatar">{seniorInitials}</div>
-				<div class="mini-senior-info">
-				<div class="mini-avatar" aria-hidden="true">♡</div>
 				<div>
 					<small>CARING FOR</small>
 					<strong>{senior.full_name || 'Senior'}</strong>

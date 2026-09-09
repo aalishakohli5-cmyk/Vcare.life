@@ -8,15 +8,6 @@ function detectCategory(name = '', details = '', explicitCategory = '') {
     if (explicitCategory) return explicitCategory.toLowerCase();
     const text = `${name} ${details}`.toLowerCase();
     if (
-        text.includes('sos') ||
-        text.includes('emergency') ||
-        text.includes('urgent') ||
-        text.includes('panic') ||
-        text.includes('help')
-    ) {
-        return 'sos';
-    }
-    if (
         text.includes('walk') ||
         text.includes('stroll') ||
         text.includes('jog') ||
@@ -73,20 +64,7 @@ function generateTaskPrompt({ seniorName, routineName, details, category }) {
 
     let specificInstructions = '';
 
-    if (category === 'sos') {
-        specificInstructions = `
-EMERGENCY ALERT CALL:
-You are calling ${sName}'s designated caregiver because ${sName} pressed the emergency SOS button on their Vcare dashboard.
-1. Immediately deliver the emergency notice with calm, clear urgency:
-   "Hello, this is an urgent alert from Vcare. ${sName} just pressed their emergency SOS button on their Vcare dashboard."
-2. State the required caregiver action clearly:
-   "Please check on ${sName} immediately. If you cannot reach them or believe they are in danger, please contact local emergency services right away."
-3. Ask the caregiver to acknowledge:
-   "Can you confirm you have received this alert for ${sName}?"
-4. When they acknowledge:
-   "Thank you. This emergency alert has been recorded. Please reach out to ${sName} as soon as possible."
-`;
-    } else if (category === 'walk') {
+    if (category === 'walk') {
         specificInstructions = `
 You are calling to check in on their scheduled walk: "${rName}"${dNotes}.
 1. Start with a warm, cheerful greeting:
