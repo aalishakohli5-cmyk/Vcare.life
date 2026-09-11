@@ -4,8 +4,6 @@
 	import { supabase } from '$lib/supabase';
 	import { chooseCareRecipient } from '$lib/careConnections';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
-	import Badge from '$lib/components/Badge.svelte';
-	import MetricCard from '$lib/components/MetricCard.svelte';
 	import '../theme.css';
 
 	/* =====================================================
@@ -31,11 +29,10 @@
 	let showAddModal = $state(false);
 	let callStatus = $state(null); // { type: 'calling' | 'success' | 'error', message: '' }
 
-	// New routine item form
+	// New medication form
 	let newMedName = $state('');
 	let newMedDosage = $state('');
 	let newMedTime = $state('08:00 AM');
-	let newCategory = $state('medicine'); // 'walk' | 'yoga' | 'diet' | 'medicine' | 'health_check'
 	let addError = $state('');
 
 	// Time
@@ -172,8 +169,7 @@
 					dosage: m.dosage,
 					scheduled_time: m.scheduled_time,
 					taken: m.taken,
-					status: m.taken ? 'taken' : 'pending',
-					category: m.category || 'medicine'
+					status: m.taken ? 'taken' : 'pending'
 				}));
 			}
 		} catch (e) {
@@ -276,7 +272,7 @@
 	async function addMedication() {
 		addError = '';
 		if (!newMedName.trim()) {
-			addError = 'Please enter a name for this routine item.';
+			addError = 'Please enter medication name.';
 			return;
 		}
 
@@ -344,13 +340,11 @@
 					dosage: newMed.dosage,
 					scheduled_time: newMed.scheduled_time,
 					taken: false,
-					status: 'pending',
-					category: newCategory
+					status: 'pending'
 				}];
 				newMedName = '';
 				newMedDosage = '';
 				newMedTime = '08:00 AM';
-				newCategory = 'medicine';
 				showAddModal = false;
 			}
 		} catch (err) {
@@ -362,7 +356,7 @@
 	}
 
 	async function deleteMedication(medId) {
-		if (!confirm('Are you sure you want to remove this routine item?')) return;
+		if (!confirm('Are you sure you want to remove this medication?')) return;
 
 		// Optimistic removal
 		medications = medications.filter(m => m.id !== medId);
@@ -420,9 +414,8 @@
 					seniorName: senior.firstName,
 					seniorId: senior.id,
 					medicationId: targetMed?.id,
-					medicationName: targetMed?.name || 'daily health check-in',
-					dosage: targetMed?.dosage || 'as planned',
-					category: targetMed?.category || 'medicine'
+					medicationName: targetMed?.name || 'daily medicines',
+					dosage: targetMed?.dosage || 'prescribed dose'
 				})
 			});
 
@@ -469,13 +462,7 @@
 </script>
 
 <svelte:head>
-	<title>{senior.firstName}'s Health Routine — Vcare.life</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com" />
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-	<link
-		href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..500&family=Public+Sans:wght@300..700&display=swap"
-		rel="stylesheet"
-	/>
+	<title>{senior.firstName}'s Medicines — Vcare.life</title>
 </svelte:head>
 
 <div class="app" data-caregiver-portal>
@@ -498,27 +485,15 @@
 				<span>Home</span>
 			</a>
 			<a href="/caregiver/medicines" class="nav-item active">
-				<span class="nav-icon" aria-hidden="true">
-					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-					</svg>
-				</span>
-				<span>Health Routine</span>
+				<span class="nav-icon">✚</span>
+				<span>Medicines</span>
 			</a>
 			<a href="/caregiver/calls" class="nav-item">
-				<span class="nav-icon" aria-hidden="true">
-					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-					</svg>
-				</span>
+				<span class="nav-icon">☎</span>
 				<span>Vcare Calls</span>
 			</a>
 			<a href="/caregiver/senior" class="nav-item">
-				<span class="nav-icon" aria-hidden="true">
-					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-					</svg>
-				</span>
+				<span class="nav-icon">♡</span>
 				<span>Senior Profile</span>
 			</a>
 			<a href="/caregiver/settings" class="nav-item">
@@ -554,8 +529,8 @@
 		<header class="topbar">
 			<div>
 				<p class="date">{currentDate}</p>
-				<h1>{senior.firstName}'s Health & Daily Routine</h1>
-				<p class="intro">Manage walks, yoga, diet, medicines, and wellness habits — and trigger instant AI reminder calls.</p>
+				<h1>{senior.firstName}'s Medicine Schedule</h1>
+				<p class="intro">Manage prescriptions, track daily adherence, and trigger instant AI reminder calls.</p>
 			</div>
 
 			<div class="top-actions">
@@ -564,8 +539,8 @@
 					<span>Call {senior.firstName} Now</span>
 				</button>
 				<button class="btn-primary" onclick={() => showAddModal = true}>
-					<span>＋</span>
-					<span>Add Routine Item</span>
+					<span>✚</span>
+					<span>Add Medicine</span>
 				</button>
 			</div>
 		</header>
@@ -580,37 +555,40 @@
 
 		<!-- METRICS STRIP -->
 		<section class="metrics-grid">
-			<MetricCard
-				label="TOTAL ROUTINES"
-				value={medications.length}
-				icon="📋"
-				variant="total"
-			/>
-			<MetricCard
-				label="COMPLETED TODAY"
-				value={takenCount}
-				icon="✓"
-				variant="taken"
-			/>
-			<MetricCard
-				label="PENDING"
-				value={pendingCount}
-				icon="⏳"
-				variant="pending"
-			/>
+			<div class="metric-card">
+				<div class="metric-icon total">💊</div>
+				<div>
+					<small>TOTAL MEDICINES</small>
+					<strong>{medications.length}</strong>
+				</div>
+			</div>
+			<div class="metric-card">
+				<div class="metric-icon taken">✓</div>
+				<div>
+					<small>TAKEN TODAY</small>
+					<strong>{takenCount}</strong>
+				</div>
+			</div>
+			<div class="metric-card">
+				<div class="metric-icon pending">⏳</div>
+				<div>
+					<small>PENDING</small>
+					<strong>{pendingCount}</strong>
+				</div>
+			</div>
 		</section>
 
 		<!-- FILTER TABS -->
 		<div class="filter-bar">
 			<div class="filter-pills">
 				<button class="pill" class:active={filter === 'all'} onclick={() => filter = 'all'}>
-					All Routines ({medications.length})
+					All ({medications.length})
 				</button>
 				<button class="pill" class:active={filter === 'pending'} onclick={() => filter = 'pending'}>
 					Pending ({pendingCount})
 				</button>
 				<button class="pill" class:active={filter === 'taken'} onclick={() => filter = 'taken'}>
-					Completed ({takenCount})
+					Taken ({takenCount})
 				</button>
 			</div>
 		</div>
@@ -619,16 +597,16 @@
 		{#if loading}
 			<div class="loading-state">
 				<div class="spinner">♥</div>
-				<p>Loading health routine for {senior.firstName}...</p>
+				<p>Loading medicines for {senior.firstName}...</p>
 			</div>
 		{:else if filteredMeds.length === 0}
 			<div class="empty-card">
-				<div class="empty-icon">📋</div>
-				<h3>No routine items found</h3>
-				<p>{filter === 'all' ? `You haven't added any routine items for ${senior.firstName} yet.` : `No ${filter} items right now.`}</p>
+				<div class="empty-icon">✚</div>
+				<h3>No medicines found</h3>
+				<p>{filter === 'all' ? `You haven't added any medicines for ${senior.firstName} yet.` : `No ${filter} medicines right now.`}</p>
 				{#if filter === 'all'}
 					<button class="btn-primary" onclick={() => showAddModal = true}>
-						<span>＋</span> Add First Routine Item
+						<span>✚</span> Add First Medicine
 					</button>
 				{/if}
 			</div>
@@ -641,57 +619,32 @@
 								{med.taken ? '✓' : '○'}
 							</button>
 							<div class="med-details">
-								<div class="med-name-row">
-									<span class="category-chip" data-cat={med.category || 'medicine'}>{med.category === 'walk' ? '🚶' : med.category === 'yoga' ? '🧘' : med.category === 'diet' ? '🥗' : med.category === 'health_check' ? '🩺' : '💊'}</span>
-									<h3>{med.name}</h3>
-								</div>
-								<!-- Details / Notes: contrast-fixed per dashboard pass rules -->
+								<h3>{med.name}</h3>
 								<p class="dosage-text">{med.dosage}</p>
 							</div>
-							<!-- Shared Badge component — warning for pending, success for taken -->
-							<Badge variant={med.taken ? 'success' : 'warning'}>
+							<span class="status-pill" class:taken={med.taken} class:pending={!med.taken}>
 								{med.taken ? 'Taken' : 'Pending'}
-							</Badge>
+							</span>
 						</div>
 
 						<div class="med-card-mid">
-							<!-- Clock icon: neutral color — informational only, not destructive -->
 							<div class="time-badge">
-								<span class="time-clock-icon" aria-hidden="true">
-									<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<circle cx="12" cy="12" r="10"/>
-										<polyline points="12 6 12 12 16 14"/>
-									</svg>
-								</span>
+								<span>⏰</span>
 								<span>{med.scheduled_time}</span>
 							</div>
 						</div>
 
 						<div class="med-card-actions">
-							<button class="action-btn call" onclick={() => triggerVcareCall(med)} title="Trigger Vcare reminder call for this routine item">
+							<button class="action-btn call" onclick={() => triggerVcareCall(med)} title="Trigger Vcare reminder call for this medicine">
 								<span>☎</span>
 								<span>Remind with AI</span>
 							</button>
-							<button class="action-btn delete" onclick={() => deleteMedication(med.id)} title="Remove routine item">
+							<button class="action-btn delete" onclick={() => deleteMedication(med.id)} title="Delete medication">
 								<span>🗑</span>
 							</button>
 						</div>
 					</div>
 				{/each}
-
-				<!-- Ghost 'add next routine item' prompt for sparse lists -->
-				{#if filteredMeds.length > 0 && filteredMeds.length < 3 && filter === 'all'}
-					<button class="ghost-add-card" onclick={() => showAddModal = true}>
-						<div class="ghost-add-icon" aria-hidden="true">
-							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<line x1="12" y1="5" x2="12" y2="19"/>
-								<line x1="5" y1="12" x2="19" y2="12"/>
-							</svg>
-						</div>
-						<span class="ghost-add-label">Add another routine item</span>
-						<span class="ghost-add-sub">A walk, yoga session, diet reminder, or medicine</span>
-					</button>
-				{/if}
 			</div>
 		{/if}
 
@@ -699,14 +652,12 @@
 
 </div>
 
-<!-- ADD ROUTINE ITEM MODAL -->
+<!-- ADD MEDICINE MODAL -->
 {#if showAddModal}
 	<div class="modal-overlay">
 		<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="add-medicine-title">
 			<header class="modal-header">
 				<div>
-					<p class="eyebrow">NEW ROUTINE ITEM</p>
-					<h2>Add Routine for {senior.firstName}</h2>
 					<p class="eyebrow">NEW PRESCRIPTION</p>
 					<h2 id="add-medicine-title">Add Medicine for {senior.firstName}</h2>
 				</div>
@@ -718,45 +669,30 @@
 			{/if}
 
 			<form onsubmit={(e) => { e.preventDefault(); addMedication(); }}>
-
-				<!-- CATEGORY CHIPS -->
 				<div class="form-group">
-					<label>Category</label>
-					<div class="category-chips">
-						<button type="button" class="cat-chip" class:active={newCategory === 'walk'} onclick={() => { newCategory = 'walk'; if (!newMedName) newMedName = 'Morning Walk'; if (!newMedDosage) newMedDosage = '30 mins brisk walk'; }}>🚶 Walk</button>
-						<button type="button" class="cat-chip" class:active={newCategory === 'yoga'} onclick={() => { newCategory = 'yoga'; if (!newMedName) newMedName = 'Yoga & Stretching'; if (!newMedDosage) newMedDosage = '20 mins gentle yoga'; }}>🧘 Yoga</button>
-						<button type="button" class="cat-chip" class:active={newCategory === 'diet'} onclick={() => { newCategory = 'diet'; if (!newMedName) newMedName = 'Healthy Meal'; if (!newMedDosage) newMedDosage = 'Balanced diet, avoid sugar'; }}>🥗 Diet</button>
-						<button type="button" class="cat-chip" class:active={newCategory === 'medicine'} onclick={() => { newCategory = 'medicine'; }}>💊 Medicine</button>
-						<button type="button" class="cat-chip" class:active={newCategory === 'health_check'} onclick={() => { newCategory = 'health_check'; if (!newMedName) newMedName = 'BP / Sugar Check'; if (!newMedDosage) newMedDosage = 'Measure and note reading'; }}>🩺 Health Check</button>
-					</div>
-				</div>
-
-				<div class="form-group">
-					<label for="medName">Routine Title</label>
+					<label for="medName">Medicine Name & Purpose</label>
 					<input
 						id="medName"
 						type="text"
 						bind:value={newMedName}
-						placeholder={newCategory === 'walk' ? 'e.g. Morning Walk in park' : newCategory === 'yoga' ? 'e.g. Gentle breathing & yoga' : newCategory === 'diet' ? 'e.g. Warm lemon water' : newCategory === 'health_check' ? 'e.g. BP / Sugar Check' : 'e.g. Metformin 500mg'}
+						placeholder="e.g. Metformin (Blood Sugar)"
 						required
 					/>
-					{#if newCategory === 'medicine'}
-						<div class="presets">
-							<span class="preset-label">Quick suggestions:</span>
-							<button type="button" class="preset-tag" onclick={() => { newMedName = 'Metformin 500mg'; newMedDosage = '1 Tablet with meals'; }}>Metformin</button>
-							<button type="button" class="preset-tag" onclick={() => { newMedName = 'Amlodipine 5mg'; newMedDosage = '1 Tablet after lunch'; }}>Amlodipine</button>
-							<button type="button" class="preset-tag" onclick={() => { newMedName = 'Calcium + Vit D3'; newMedDosage = '1 Tablet post dinner'; }}>Calcium</button>
-						</div>
-					{/if}
+					<div class="presets">
+						<span class="preset-label">Quick suggestions:</span>
+						<button type="button" class="preset-tag" onclick={() => { newMedName = 'Metformin 500mg'; newMedDosage = '1 Tablet with meals'; }}>Metformin</button>
+						<button type="button" class="preset-tag" onclick={() => { newMedName = 'Amlodipine 5mg'; newMedDosage = '1 Tablet after lunch'; }}>Amlodipine</button>
+						<button type="button" class="preset-tag" onclick={() => { newMedName = 'Calcium + Vit D3'; newMedDosage = '1 Tablet post dinner'; }}>Calcium</button>
+					</div>
 				</div>
 
 				<div class="form-group">
-					<label for="medDosage">Details / Notes</label>
+					<label for="medDosage">Dosage & Instructions</label>
 					<input
 						id="medDosage"
 						type="text"
 						bind:value={newMedDosage}
-						placeholder={newCategory === 'walk' ? 'e.g. 30 mins brisk walk' : newCategory === 'yoga' ? 'e.g. 20 mins gentle yoga' : newCategory === 'diet' ? 'e.g. 2 glasses warm water' : newCategory === 'health_check' ? 'e.g. Measure and note reading' : 'e.g. 1 Tablet after breakfast'}
+						placeholder="e.g. 1 Tablet after breakfast"
 					/>
 				</div>
 
@@ -769,10 +705,8 @@
 						placeholder="e.g. 08:00 AM"
 					/>
 					<div class="time-presets">
-						<button type="button" class="time-tag" class:active={newMedTime === '06:30 AM'} onclick={() => newMedTime = '06:30 AM'}>🌄 06:30 AM</button>
 						<button type="button" class="time-tag" class:active={newMedTime === '08:00 AM'} onclick={() => newMedTime = '08:00 AM'}>🌅 08:00 AM</button>
-						<button type="button" class="time-tag" class:active={newMedTime === '12:00 PM'} onclick={() => newMedTime = '12:00 PM'}>☀️ 12:00 PM</button>
-						<button type="button" class="time-tag" class:active={newMedTime === '05:00 PM'} onclick={() => newMedTime = '05:00 PM'}>🌇 05:00 PM</button>
+						<button type="button" class="time-tag" class:active={newMedTime === '02:00 PM'} onclick={() => newMedTime = '02:00 PM'}>☀️ 02:00 PM</button>
 						<button type="button" class="time-tag" class:active={newMedTime === '08:30 PM'} onclick={() => newMedTime = '08:30 PM'}>🌙 08:30 PM</button>
 					</div>
 				</div>
@@ -780,7 +714,7 @@
 				<footer class="modal-footer">
 					<button type="button" class="btn-cancel" onclick={() => showAddModal = false}>Cancel</button>
 					<button type="submit" class="btn-submit" disabled={saving}>
-						{saving ? 'Saving...' : 'Save Routine Item'}
+						{saving ? 'Saving...' : 'Save Medicine'}
 					</button>
 				</footer>
 			</form>
@@ -789,6 +723,21 @@
 {/if}
 
 <style>
+	:global(*) {
+		box-sizing: border-box;
+	}
+
+	:global(html), :global(body) {
+		margin: 0;
+		min-height: 100%;
+	}
+
+	:global(body) {
+		background: #f7f0e2;
+		color: #173f31;
+		font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", "Marker Felt", cursive;
+	}
+
 	button, a, input {
 		font-family: inherit;
 	}
@@ -944,13 +893,12 @@
 		font-size: 15px;
 	}
 
-	/* MAIN — constrained so sparse lists don't float in dead space */
+	/* MAIN */
 	.main {
 		width: 100%;
-		/* Tighter max-width than the dashboard: medicines list reads better narrower */
-		max-width: 960px;
+		max-width: 1500px;
 		margin: 0 auto;
-		padding: 34px clamp(24px, 4vw, 56px) 48px;
+		padding: 34px clamp(30px, 4vw, 65px) 45px;
 	}
 
 	.topbar {
@@ -961,10 +909,9 @@
 		margin-bottom: 26px;
 	}
 
-	.date { margin: 0 0 5px; color: #4b6357; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
-	/* Fraunces serif — display headline only, exactly as established on dashboard */
-	.topbar h1 { margin: 0; font-size: clamp(24px, 2.5vw, 34px); color: #0b3d2b; font-family: "Fraunces", Georgia, serif; font-weight: 500; letter-spacing: -0.02em; }
-	.intro { margin: 6px 0 0; color: #475569; font-size: 14px; }
+	.date { margin: 0 0 5px; color: #85745f; font-size: 11px; }
+	.topbar h1 { margin: 0; font-size: clamp(24px, 2.5vw, 34px); color: #0b3d2b; }
+	.intro { margin: 6px 0 0; color: #72624d; font-size: 13px; }
 
 	.top-actions { display: flex; gap: 12px; align-items: center; }
 
@@ -1037,6 +984,33 @@
 		margin-bottom: 26px;
 	}
 
+	.metric-card {
+		background: white;
+		padding: 20px;
+		border-radius: 18px;
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		border: 1px solid #ebe0cc;
+		box-shadow: 0 4px 18px rgba(23,63,49,0.04);
+	}
+
+	.metric-icon {
+		width: 46px;
+		height: 46px;
+		border-radius: 14px;
+		display: grid;
+		place-items: center;
+		font-size: 20px;
+	}
+
+	.metric-icon.total { background: #e8f0fe; color: #1a73e8; }
+	.metric-icon.taken { background: #e6f7eb; color: #137333; }
+	.metric-icon.pending { background: #fef7e0; color: #b06000; }
+
+	.metric-card small { display: block; font-size: 10px; color: #8a7a66; letter-spacing: 0.8px; }
+	.metric-card strong { font-size: 24px; color: #173f31; }
+
 	/* FILTER BAR */
 	.filter-bar {
 		display: flex;
@@ -1071,62 +1045,11 @@
 		box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 	}
 
-	/* MEDS GRID — single column when max-width makes the page narrower */
+	/* MEDS GRID */
 	.meds-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
 		gap: 20px;
-	}
-
-	/* Ghost add-medicine prompt for short lists (< 3 items) */
-	.ghost-add-card {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
-		padding: 28px 22px;
-		border: 1.5px dashed #c8d8d0;
-		border-radius: 20px;
-		background: #f9fbfa;
-		cursor: pointer;
-		transition: border-color 0.18s ease, background 0.18s ease;
-		width: 100%;
-		text-align: center;
-		/* Reset button appearance */
-		outline: none;
-		font-family: inherit;
-	}
-
-	.ghost-add-card:hover {
-		border-color: #4e9e72;
-		background: #f0fdf4;
-	}
-
-	.ghost-add-icon {
-		width: 40px;
-		height: 40px;
-		display: grid;
-		place-items: center;
-		border-radius: 12px;
-		background: #e8f7ee;
-		color: #166534;
-		transition: background 0.18s ease;
-	}
-
-	.ghost-add-card:hover .ghost-add-icon {
-		background: #dcfce7;
-	}
-
-	.ghost-add-label {
-		color: #166534;
-		font-size: 14px;
-		font-weight: 600;
-	}
-
-	.ghost-add-sub {
-		color: #4b5563;
-		font-size: 12px;
 	}
 
 	.med-card {
@@ -1185,11 +1108,20 @@
 	}
 
 	.med-details { flex: 1; }
-	.med-details h3 { margin: 0; font-size: 17px; color: #173f31; font-weight: 700; }
-	/* Dosage contrast fix — same rule as dashboard pass (#475569 ≥4.5:1 on white) */
-	.dosage-text { margin: 4px 0 0; color: #475569; font-size: 13px; }
+	.med-details h3 { margin: 0; font-size: 17px; color: #173f31; }
+	.dosage-text { margin: 4px 0 0; color: #72624d; font-size: 12px; }
 
-	/* .status-pill removed — replaced by shared Badge component imported from $lib/components/Badge.svelte */
+	.status-pill {
+		padding: 4px 10px;
+		border-radius: 8px;
+		font-size: 10px;
+		font-weight: bold;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	.status-pill.taken { background: #d7f5dd; color: #0b6845; }
+	.status-pill.pending { background: #fff0d4; color: #b86200; }
 
 	.med-card-mid {
 		display: flex;
@@ -1201,22 +1133,12 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 6px;
-		background: #f1f4f2;
-		border: 1px solid #dde4df;
+		background: #f4ecdc;
 		padding: 6px 12px;
 		border-radius: 10px;
-		font-size: 13px;
-		font-weight: 600;
-		/* Neutral slate — informational only, not destructive (clock was red before) */
-		color: #334e44;
-	}
-
-	/* Clock SVG icon — neutral to distinguish from the red delete action */
-	.time-clock-icon {
-		display: flex;
-		align-items: center;
-		/* Muted teal-gray, clearly not an alert color */
-		color: #527568;
+		font-size: 12px;
+		font-weight: bold;
+		color: #4b3e2d;
 	}
 
 	.med-card-actions {
@@ -1405,45 +1327,4 @@
 	}
 
 	.btn-submit:hover { background: #074e33; }
-
-	/* CATEGORY CHIPS — modal */
-	.category-chips {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
-		margin-top: 6px;
-	}
-
-	.cat-chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 5px;
-		padding: 7px 14px;
-		border-radius: 10px;
-		border: 1.5px solid #d9cdb8;
-		background: #fdfbf7;
-		font-size: 13px;
-		font-weight: 600;
-		color: #3b3022;
-		cursor: pointer;
-		transition: 0.18s ease;
-	}
-
-	.cat-chip:hover { border-color: #0b6845; background: #f0fdf4; }
-	.cat-chip.active { background: #0b6845; color: white; border-color: #0b6845; }
-
-	/* CATEGORY ICON in med card */
-	.med-name-row {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.med-name-row h3 { margin: 0; font-size: 17px; color: #173f31; font-weight: 700; }
-
-	.category-chip {
-		font-size: 16px;
-		line-height: 1;
-		flex-shrink: 0;
-	}
 </style>

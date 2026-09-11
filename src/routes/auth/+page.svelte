@@ -117,14 +117,6 @@
     name="description"
     content="Sign in to your Vcare.life account."
   />
-
-  <!-- Fonts — same as landing page -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..500&family=Public+Sans:wght@300..700&display=swap"
-    rel="stylesheet"
-  />
 </svelte:head>
 
 
@@ -136,14 +128,7 @@
 
   <section class="auth-story">
 
-    <!-- Same grandma.jpg + warm amber/sepia overlay as the landing page -->
-    <img
-      src="/grandma.jpg"
-      alt="Senior woman happily talking on the phone"
-      class="story-photo"
-    />
-
-    <div class="story-overlay"></div>
+    <div class="story-glow"></div>
 
     <a href="/" class="brand">
       <div class="brand-heart">♥</div>
@@ -368,30 +353,15 @@
             disabled={loading}
           />
 
-          <!-- Eye / eye-slash SVG — more universal than text "Show" -->
           <button
             type="button"
             class="show-password"
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
             onclick={() => {
               showPassword = !showPassword;
             }}
             disabled={loading}
           >
-            {#if showPassword}
-              <!-- eye-slash -->
-              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-                <line x1="1" y1="1" x2="23" y2="23"/>
-              </svg>
-            {:else}
-              <!-- eye -->
-              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-            {/if}
+            {showPassword ? 'Hide' : 'Show'}
           </button>
 
         </div>
@@ -459,12 +429,8 @@
 
       <div class="privacy">
 
-        <!-- Canonical SVG shield — standardized trust reassurance icon -->
-        <div class="privacy-icon" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            <path d="m9 12 2 2 4-4"/>
-          </svg>
+        <div class="privacy-icon">
+          ◉
         </div>
 
         <div>
@@ -494,12 +460,29 @@
   }
 
 
-  :global(html) {
+  :global(html),
+  :global(body) {
     margin: 0;
     padding: 0;
+
     width: 100%;
     min-height: 100%;
   }
+
+
+  :global(body) {
+    font-family:
+      Inter,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+
+    background: #f7f5eb;
+
+    color: #153d32;
+  }
+
 
   :global(button),
   :global(input) {
@@ -546,58 +529,46 @@
 
     color: white;
 
-    /* Background is now the photo + warm overlay (see .story-photo / .story-overlay).
-       Keep a fallback colour in case the image is slow to load. */
-    background: #2a1806;
-  }
-
-
-  /* Photo layer — same image as landing page */
-  .story-photo {
-    position: absolute;
-
-    inset: 0;
-
-    width: 100%;
-    height: 100%;
-
-    object-fit: cover;
-    object-position: 53% center;
-
-    z-index: 0;
-  }
-
-
-  /* Warm amber/sepia overlay — exact same values as landing page */
-  .story-overlay {
-    position: absolute;
-
-    inset: 0;
-
-    z-index: 1;
-
     background:
-      linear-gradient(
-        90deg,
-        rgba(48, 26, 8, 0.91) 0%,
-        rgba(72, 40, 12, 0.65) 50%,
-        rgba(90, 54, 18, 0.30) 100%
+      radial-gradient(
+        circle at 90% 15%,
+        rgba(173, 211, 131, 0.22),
+        transparent 30%
       ),
-      linear-gradient(
-        180deg,
-        rgba(44, 24, 8, 0.42) 0%,
-        transparent 48%,
-        rgba(36, 20, 6, 0.82) 100%
+
+      radial-gradient(
+        circle at 12% 84%,
+        rgba(238, 200, 117, 0.12),
+        transparent 30%
       ),
+
       linear-gradient(
-        135deg,
-        rgba(200, 130, 40, 0.10) 0%,
-        transparent 60%
+        145deg,
+        #0d3b2d 0%,
+        #14553e 55%,
+        #1f694d 100%
       );
   }
 
 
-  /* Removed .story-glow — the photo + overlay replaces it */
+  .story-glow {
+    position: absolute;
+
+    width: 460px;
+    height: 460px;
+
+    right: -250px;
+    top: -190px;
+
+    border-radius: 50%;
+
+    background:
+      radial-gradient(
+        circle,
+        rgba(224, 238, 166, 0.18),
+        transparent 70%
+      );
+  }
 
 
 
@@ -607,7 +578,6 @@
   .brand {
     position: relative;
 
-    /* Must sit above the photo overlay */
     z-index: 3;
 
     display: flex;
@@ -678,9 +648,6 @@
     margin:
       auto
       0;
-
-    /* Ensure checklist and copy are legible above the photo layer */
-    text-shadow: 0 1px 3px rgba(0,0,0,0.25);
   }
 
 
@@ -692,22 +659,20 @@
 
     font-size: 10px;
 
-    /* Medium weight — matches landing page eyebrow treatment */
-    font-weight: 500;
+    font-weight: 800;
 
-    letter-spacing: 0.20em;
+    letter-spacing: 0.18em;
 
-    color: #e0edbd;
+    color: #dceab7;
   }
 
 
   .story-content h1 {
     margin: 0;
 
-    /* Fraunces — matches landing page headlines */
     font-family:
-      "Fraunces",
       Georgia,
+      "Times New Roman",
       serif;
 
     font-size:
@@ -716,7 +681,7 @@
     line-height: 0.98;
 
     letter-spacing:
-      -0.03em;
+      -0.045em;
 
     font-weight: 500;
   }
@@ -770,9 +735,8 @@
 
     font-size: 12px;
 
-    /* Boosted from 0.82 → 0.95 for WCAG AA contrast over photo overlay */
     color:
-      rgba(255,255,255,0.95);
+      rgba(255,255,255,0.82);
   }
 
 
@@ -784,15 +748,12 @@
 
     place-items: center;
 
-    flex-shrink: 0;
-
     border-radius: 50%;
 
-    /* Lighter fill + stronger checkmark color for ≥3:1 graphical contrast */
     background:
-      rgba(224,239,188,0.22);
+      rgba(224,239,188,0.12);
 
-    color: #f0f9cf;
+    color: #dceba8;
 
     font-size: 10px;
   }
@@ -903,17 +864,16 @@
 
     gap: 12px;
 
-    /* Spacing group: context card is its own logical block */
-    margin-bottom: 36px;
+    margin-bottom: 33px;
 
     border-radius: 16px;
 
-    /* Flat white surface — same treatment as landing page role cards */
-    background: #ffffff;
+    background:
+      rgba(235,244,229,0.72);
 
-    border: 1px solid #e2e8e4;
-
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border:
+      1px solid
+      #d9e7d4;
   }
 
 
@@ -961,32 +921,13 @@
 
 
   .change-role {
-    /* Styled as a secondary-button action — more visual weight than plain text */
-    display: inline-flex;
-    align-items: center;
-
-    padding: 4px 10px;
-
-    border-radius: 8px;
-
-    background: rgba(78, 158, 114, 0.08);
-
-    color: #2d7a52;
+    color: #35785b;
 
     font-size: 10px;
+
     font-weight: 700;
 
     text-decoration: none;
-
-    border: 1px solid rgba(78, 158, 114, 0.22);
-
-    transition: background 0.15s ease, border-color 0.15s ease;
-  }
-
-
-  .change-role:hover {
-    background: rgba(78, 158, 114, 0.14);
-    border-color: rgba(78, 158, 114, 0.40);
   }
 
 
@@ -1004,10 +945,9 @@
 
     font-size: 9px;
 
-    /* Medium weight — consistent with landing-page eyebrow */
-    font-weight: 500;
+    font-weight: 800;
 
-    letter-spacing: 0.20em;
+    letter-spacing: 0.18em;
 
     color: #458064;
   }
@@ -1016,10 +956,9 @@
   .heading h2 {
     margin: 0;
 
-    /* Fraunces — consistent with landing page h2 */
     font-family:
-      "Fraunces",
       Georgia,
+      "Times New Roman",
       serif;
 
     font-size:
@@ -1030,16 +969,15 @@
     font-weight: 500;
 
     letter-spacing:
-      -0.03em;
+      -0.04em;
   }
 
 
   .heading > p:last-child {
-    /* Spacing group: extra gap before Google button */
     margin:
       13px
       0
-      32px;
+      25px;
 
     font-size: 12px;
 
@@ -1065,11 +1003,9 @@
 
     gap: 11px;
 
-    /* Slightly heavier border + ambient shadow to read as primary fast-path,
-       distinct from the input fields below */
     border:
-      1.5px solid
-      #c8d5cc;
+      1px solid
+      #d9dfd8;
 
     border-radius: 15px;
 
@@ -1083,9 +1019,6 @@
 
     font-weight: 700;
 
-    /* Resting shadow — gives the button lift vs the plain inputs */
-    box-shadow: 0 2px 8px rgba(30,65,49,0.07);
-
     transition:
       transform 0.2s ease,
       box-shadow 0.2s ease;
@@ -1098,7 +1031,7 @@
 
     box-shadow:
       0 10px 25px
-      rgba(30,65,49,0.12);
+      rgba(30,65,49,0.08);
   }
 
 
@@ -1129,9 +1062,8 @@
 
 
   .divider {
-    /* Spacing group: separate Google method from email method */
     margin:
-      26px
+      22px
       0;
 
     display: flex;
@@ -1261,8 +1193,7 @@
 
 
   .password-input input {
-    /* More room for the SVG eye icon (wider than text 'Show') */
-    padding-right: 50px;
+    padding-right: 65px;
   }
 
 
@@ -1280,21 +1211,13 @@
 
     background: transparent;
 
-    /* Icon inherits the field's green accent */
     color: #51806a;
 
-    line-height: 0;
+    font-size: 9px;
 
-    padding: 4px;
+    font-weight: 700;
 
     cursor: pointer;
-
-    transition: color 0.15s ease;
-  }
-
-
-  .show-password:hover {
-    color: #2d7a52;
   }
 
 
@@ -1369,8 +1292,7 @@
 
 
   .account-switch {
-    /* Spacing group: separate from the submit button */
-    margin-top: 26px;
+    margin-top: 21px;
 
     display: flex;
 
@@ -1413,8 +1335,7 @@
 
 
   .privacy {
-    /* Spacing group: trust box is its own visual block at the bottom */
-    margin-top: 36px;
+    margin-top: 27px;
 
     padding:
       11px

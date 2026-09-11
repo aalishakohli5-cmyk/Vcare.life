@@ -81,18 +81,24 @@
 </div>
 
 <style>
+  :global(body) {
+    margin: 0;
+    font-family: Inter, system-ui, sans-serif;
+    background: #f8f7ef;
+  }
+
   .callback-page {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: var(--color-text-primary, #153d32);
+    color: #153d32;
   }
 
   h1 {
     margin: 20px 0 8px;
-    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    font-family: Georgia, serif;
     font-size: 42px;
     font-weight: 500;
   }

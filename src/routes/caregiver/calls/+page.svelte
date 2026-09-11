@@ -2,9 +2,9 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
+	import { chooseCareRecipient } from '$lib/careConnections';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
-	import Badge from '$lib/components/Badge.svelte';
-	import MetricCard from '$lib/components/MetricCard.svelte';
+	import '../theme.css';
 
 	/* =====================================================
 	   STATE
@@ -101,37 +101,12 @@
 				}
 			}
 
-			if ((!seniors || seniors.length === 0) && profile?.emergency_contact_name) {
-				if (profile.emergency_contact_phone) {
-					try {
-						const { data: matched } = await supabase
-							.from('profiles')
-							.select('*')
-							.eq('phone', profile.emergency_contact_phone)
-							.maybeSingle();
-						if (matched) {
-							seniors = [matched];
-						}
-					} catch (e) {
-						console.warn('Matching senior by phone error:', e);
-					}
-				}
-
-				if (!seniors || seniors.length === 0) {
-					seniors = [{
-						id: user.id,
-						full_name: profile.emergency_contact_name,
-						phone: profile.emergency_contact_phone || '',
-						role: 'senior'
-					}];
-				}
-			}
 		} catch (err) {
 			console.error('Supabase direct senior query error:', err);
 		}
 
 		if (seniors && seniors.length > 0) {
-			const firstSenior = seniors[0];
+			const firstSenior = chooseCareRecipient(seniors);
 			senior.id = firstSenior.id;
 			senior.name = firstSenior.full_name || 'Senior';
 			senior.firstName = (firstSenior.full_name || 'Senior').split(' ')[0];
@@ -279,8 +254,8 @@
 					phoneNumber: senior.phone,
 					seniorName: senior.firstName,
 					seniorId: senior.id,
-					medicationName: 'daily health check-in',
-					dosage: 'prescribed routine'
+					medicationName: 'afternoon medicines',
+					dosage: 'prescribed dosage'
 				})
 			});
 
@@ -333,7 +308,7 @@
 	<title>Vcare Calls with {senior.firstName} — Vcare.life</title>
 </svelte:head>
 
-<div class="app">
+<div class="app" data-caregiver-portal>
 
 	<!-- SIDEBAR -->
 	<aside class="sidebar">
@@ -349,44 +324,31 @@
 
 		<nav>
 			<a href="/caregiver/dashboard" class="nav-item">
-				<span class="nav-icon" aria-hidden="true">
-					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-						<polyline points="9 22 9 12 15 12 15 22"/>
-					</svg>
-				</span>
+				<span class="nav-icon">⌂</span>
 				<span>Home</span>
 			</a>
 			<a href="/caregiver/medicines" class="nav-item">
-				<span class="nav-icon" aria-hidden="true">
-					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-					</svg>
-				</span>
-				<span>Health Routine</span>
+				<span class="nav-icon">✚</span>
+				<span>Medicines</span>
 			</a>
 			<a href="/caregiver/calls" class="nav-item active">
-				<span class="nav-icon" aria-hidden="true">
-					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-					</svg>
-				</span>
+				<span class="nav-icon">☎</span>
 				<span>Vcare Calls</span>
 			</a>
 			<a href="/caregiver/senior" class="nav-item">
-				<span class="nav-icon" aria-hidden="true">
-					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-					</svg>
-				</span>
+				<span class="nav-icon">♡</span>
 				<span>Senior Profile</span>
+			</a>
+			<a href="/caregiver/settings" class="nav-item">
+				<span class="nav-icon">⚙</span>
+				<span>Settings</span>
 			</a>
 		</nav>
 
 		<div class="sidebar-bottom">
 			<a href="/caregiver/senior" class="mini-senior">
-				<div class="mini-avatar">{senior.initials}</div>
-				<div class="mini-senior-info">
+				<div class="mini-avatar" aria-hidden="true">♡</div>
+				<div>
 					<small>CARING FOR</small>
 					<strong>{senior.name}</strong>
 				</div>
@@ -398,13 +360,7 @@
 					<strong>{caregiverName}</strong>
 					<span>Caregiver</span>
 				</div>
-				<button class="logout" onclick={logout} aria-label="Sign out" title="Sign out">
-					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-						<polyline points="16 17 21 12 16 7"/>
-						<line x1="21" y1="12" x2="9" y2="12"/>
-					</svg>
-				</button>
+				<button class="logout" onclick={logout} aria-label="Sign out">↗</button>
 			</div>
 		</div>
 	</aside>
@@ -416,17 +372,12 @@
 		<header class="topbar">
 			<div>
 				<p class="date">{currentDate}</p>
-				<!-- DISPLAY SERIF ONLY HERE FOR HEADLINE -->
-				<h1 class="page-title">Vcare Calls with {senior.firstName}</h1>
+				<h1>Vcare Calls with {senior.firstName}</h1>
 				<p class="intro">Review daily AI phone check-ins, listen-in summaries, and conversation transcripts.</p>
 			</div>
 
 			<div class="top-actions">
-				<a
-					href={`tel:${senior.phone}`}
-					class="btn-secondary"
-					aria-label={`Direct phone call to ${senior.firstName}`}
-				>
+				<a href={`tel:${senior.phone}`} class="btn-secondary">
 					<span>☎</span>
 					<span>Direct Call</span>
 				</a>
@@ -439,37 +390,35 @@
 
 		<!-- CALL STATUS TOAST -->
 		{#if callStatus}
-			<div
-				class="call-banner"
-				class:calling={callStatus.type === 'calling'}
-				class:success={callStatus.type === 'success'}
-				class:error={callStatus.type === 'error'}
-			>
-				<span aria-hidden="true">{callStatus.type === 'calling' ? '⏳' : callStatus.type === 'success' ? '✓' : '⚠️'}</span>
+			<div class="call-banner" class:calling={callStatus.type === 'calling'} class:success={callStatus.type === 'success'} class:error={callStatus.type === 'error'}>
+				<span>{callStatus.type === 'calling' ? '⏳' : callStatus.type === 'success' ? '✓' : '⚠'}</span>
 				<p>{callStatus.message}</p>
 			</div>
 		{/if}
 
-		<!-- METRICS STRIP — USING SHARED METRICCARD COMPONENT -->
+		<!-- METRICS STRIP -->
 		<section class="metrics-grid">
-			<MetricCard
-				label="TOTAL CHECK-IN CALLS"
-				value={calls.length}
-				icon="☎"
-				variant="total"
-			/>
-			<MetricCard
-				label="WELLBEING STATUS"
-				value={distressCount === 0 ? 'Peaceful & Normal' : `${distressCount} Attention Needed`}
-				icon={distressCount === 0 ? '😊' : '⚠️'}
-				variant={distressCount === 0 ? 'sentiment' : 'distress'}
-			/>
-			<MetricCard
-				label="LATEST CHECK-IN"
-				value={calls.length > 0 ? calls[0].formattedTime : 'None yet'}
-				icon="⏰"
-				variant="latest"
-			/>
+			<div class="metric-card">
+				<div class="metric-icon total">☎</div>
+				<div>
+					<small>TOTAL CHECK-IN CALLS</small>
+					<strong>{calls.length}</strong>
+				</div>
+			</div>
+			<div class="metric-card">
+				<div class="metric-icon sentiment">😊</div>
+				<div>
+					<small>WELLBEING STATUS</small>
+					<strong>{distressCount === 0 ? 'Peaceful & Normal' : `${distressCount} Attention Needed`}</strong>
+				</div>
+			</div>
+			<div class="metric-card">
+				<div class="metric-icon latest">⏰</div>
+				<div>
+					<small>LATEST CHECK-IN</small>
+					<strong>{calls.length > 0 ? calls[0].formattedTime : 'None yet'}</strong>
+				</div>
+			</div>
 		</section>
 
 		<!-- FILTER TABS -->
@@ -495,7 +444,7 @@
 			</div>
 		{:else if filteredCalls.length === 0}
 			<div class="empty-card">
-				<div class="empty-icon" aria-hidden="true">☎</div>
+				<div class="empty-icon">☎</div>
 				<h3>No call history yet</h3>
 				<p>Vcare will automatically call {senior.firstName} for daily medication check-ins. You can also trigger a call right now.</p>
 				<button class="btn-primary" onclick={triggerCheckInCall}>
@@ -505,11 +454,11 @@
 		{:else}
 			<div class="calls-list">
 				{#each filteredCalls as call (call.id)}
-					<article class="call-card" class:distress={call.distress_detected}>
+					<div class="call-card" class:distress={call.distress_detected}>
 						<div class="call-header">
 							<div class="call-lead">
-								<div class="call-avatar" class:distress={call.distress_detected} aria-hidden="true">
-									{call.distress_detected ? '⚠️' : '☎'}
+								<div class="call-avatar" class:distress={call.distress_detected}>
+									{call.distress_detected ? '!' : '☎'}
 								</div>
 								<div>
 									<h3>Check-in with {senior.firstName}</h3>
@@ -521,24 +470,24 @@
 
 							<div class="call-badges">
 								{#if call.distress_detected}
-									<Badge variant="distress" dot={true}>Distress Detected</Badge>
+									<span class="badge distress">⚠ Distress Detected</span>
 								{:else}
-									<Badge variant="normal" dot={true}>Normal Check-in</Badge>
+									<span class="badge normal">✓ Normal Check-in</span>
 								{/if}
-								<Badge variant="neutral">{call.status}</Badge>
+								<span class="badge status">{call.status}</span>
 							</div>
 						</div>
 
 						<div class="call-summary-box">
-							<p class="summary-title">Summary & Key Insights</p>
+							<p class="summary-title">Summary & Insight:</p>
 							<p class="summary-content">
-								"{call.transcript.substring(0, 180)}{call.transcript.length > 180 ? '...' : ''}"
+								"{call.transcript.substring(0, 160)}{call.transcript.length > 160 ? '...' : ''}"
 							</p>
 						</div>
 
 						{#if expandedCallId === call.id}
 							<div class="transcript-box">
-								<h4>Full Conversation Transcript</h4>
+								<h4>Full Conversation Transcript:</h4>
 								<div class="transcript-text">
 									{call.transcript}
 								</div>
@@ -550,11 +499,11 @@
 								<span>{expandedCallId === call.id ? 'Hide Full Transcript ▲' : 'View Full Transcript ▼'}</span>
 							</button>
 							<a href={`tel:${senior.phone}`} class="call-senior-btn">
-								<span aria-hidden="true">☎</span>
+								<span>☎</span>
 								<span>Follow Up with {senior.firstName}</span>
 							</a>
 						</div>
-					</article>
+					</div>
 				{/each}
 			</div>
 		{/if}
@@ -564,399 +513,276 @@
 </div>
 
 <style>
-	/* =====================================================
-	   APP LAYOUT
-	===================================================== */
+	:global(*) { box-sizing: border-box; }
+	:global(html), :global(body) { margin: 0; min-height: 100%; }
+	:global(body) {
+		background: #f7f0e2;
+		color: #173f31;
+		font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", "Marker Felt", cursive;
+	}
+
+	button, a { font-family: inherit; }
 
 	.app {
 		min-height: 100vh;
 		display: grid;
-		grid-template-columns: 250px 1fr;
-		background: var(--color-bg, #f8f6f0);
+		grid-template-columns: 245px 1fr;
+		background: radial-gradient(circle at 100% 0%, rgba(223, 231, 93, 0.12), transparent 25%), #f7f0e2;
 	}
 
-	/* =====================================================
-	   SIDEBAR (STANDARDIZED WITH >=11-13px TYPOGRAPHY)
-	===================================================== */
-
+	/* SIDEBAR */
 	.sidebar {
 		position: sticky;
 		top: 0;
 		height: 100vh;
-		padding: 26px 18px 20px;
+		padding: 28px 18px 22px;
 		display: flex;
 		flex-direction: column;
-		background: linear-gradient(180deg, #093325 0%, #0d4633 100%);
+		background: linear-gradient(180deg, #073e2c, #07563a);
 		color: white;
-		border-right: 1px solid rgba(255, 255, 255, 0.08);
-		z-index: 20;
+		border-right: 1px solid rgba(255,255,255,0.08);
 	}
 
 	.brand {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		padding: 0 6px;
+		gap: 11px;
+		padding: 0 8px;
 		text-decoration: none;
 		color: white;
 	}
 
 	.brand-heart {
-		width: 40px;
-		height: 40px;
+		width: 42px;
+		height: 42px;
 		display: grid;
 		place-items: center;
-		border-radius: 12px;
+		border-radius: 13px;
 		background: white;
 		color: #0b6845;
-		font-size: 20px;
-		flex-shrink: 0;
+		font-size: 22px;
 	}
 
-	.brand > div:last-child {
-		display: flex;
-		flex-direction: column;
-	}
-
-	.brand strong {
-		font-size: 18px;
-		font-weight: 700;
-		letter-spacing: -0.02em;
-	}
-
-	.brand span {
-		margin-top: 1px;
-		color: rgba(255, 255, 255, 0.68);
-		font-size: 11px;
-	}
+	.brand > div:last-child { display: flex; flex-direction: column; }
+	.brand strong { font-size: 19px; }
+	.brand span { margin-top: 2px; color: rgba(255,255,255,0.65); font-size: 8px; }
 
 	.care-label {
-		margin: 28px 8px 12px;
-		color: var(--color-brand-accent, #dce765);
-		font-size: 11px;
-		font-weight: 700;
-		letter-spacing: 0.12em;
+		margin: 35px 10px 13px;
+		color: #dce765;
+		font-size: 9px;
+		font-weight: bold;
+		letter-spacing: 1.4px;
 	}
 
-	nav {
-		display: grid;
-		gap: 6px;
-	}
+	nav { display: grid; gap: 6px; }
 
 	.nav-item {
-		min-height: 44px;
-		padding: 0 14px;
+		min-height: 47px;
+		padding: 0 13px;
 		display: flex;
 		align-items: center;
 		gap: 12px;
-		border-radius: 12px;
+		border-radius: 13px;
 		text-decoration: none;
-		color: rgba(255, 255, 255, 0.75);
-		font-size: 13px;
-		font-weight: 600;
-		transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+		color: rgba(255,255,255,0.68);
+		font-size: 12px;
+		font-weight: bold;
+		transition: 0.18s ease;
 	}
 
 	.nav-item:hover {
 		color: white;
-		background: rgba(255, 255, 255, 0.08);
-		transform: translateX(2px);
+		background: rgba(255,255,255,0.07);
+		transform: translateX(3px);
 	}
 
-	.nav-item.active {
-		color: #0d3827;
-		background: var(--color-brand-accent, #dce76a);
-		font-weight: 700;
-	}
-
-	.nav-icon {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-	}
-
-	.sidebar-bottom {
-		margin-top: auto;
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-	}
+	.nav-item.active { color: #143d2e; background: #dce76a; }
+	.nav-icon { width: 26px; font-size: 17px; text-align: center; }
+	.sidebar-bottom { margin-top: auto; }
 
 	.mini-senior {
-		padding: 10px 12px;
+		margin-bottom: 13px;
+		padding: 11px;
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		border-radius: 13px;
-		background: rgba(255, 255, 255, 0.06);
+		border: 1px solid rgba(255,255,255,0.10);
+		border-radius: 14px;
+		background: rgba(255,255,255,0.06);
 		text-decoration: none;
 		color: inherit;
-		transition: background 0.2s ease;
+		transition: 0.2s ease;
 	}
 
-	.mini-senior:hover {
-		background: rgba(255, 255, 255, 0.12);
-	}
+	.mini-senior:hover { background: rgba(255,255,255,0.12); }
 
 	.mini-avatar {
-		width: 32px;
-		height: 32px;
+		width: 36px;
+		height: 36px;
 		display: grid;
 		place-items: center;
 		flex-shrink: 0;
-		border-radius: 9px;
-		background: var(--color-brand-accent, #dce76a);
-		color: #143d2e;
-		font-size: 12px;
-		font-weight: 700;
-	}
-
-	.mini-senior-info {
-		min-width: 0;
-		display: flex;
-		flex-direction: column;
-	}
-
-	.mini-senior small {
-		color: rgba(255, 255, 255, 0.6);
+		border-radius: 11px;
+		background: #dce76a;
+		color: #16402e;
 		font-size: 10px;
-		font-weight: 600;
-		letter-spacing: 0.08em;
+		font-weight: bold;
 	}
 
-	.mini-senior strong {
-		margin-top: 1px;
-		overflow: hidden;
-		color: white;
-		font-size: 13px;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
+	.mini-senior small { color: rgba(255,255,255,0.5); font-size: 6px; letter-spacing: 1px; }
+	.mini-senior strong { color: white; font-size: 10px; }
 
 	.profile {
-		padding-top: 12px;
+		padding: 13px 8px 0;
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		border-top: 1px solid rgba(255, 255, 255, 0.10);
+		gap: 9px;
+		border-top: 1px solid rgba(255,255,255,0.10);
 	}
 
 	.profile-avatar {
-		width: 34px;
-		height: 34px;
+		width: 36px;
+		height: 36px;
 		display: grid;
 		place-items: center;
 		flex-shrink: 0;
 		border-radius: 50%;
 		background: #f3e6c8;
 		color: #174631;
-		font-size: 13px;
-		font-weight: 700;
+		font-size: 12px;
+		font-weight: bold;
 	}
 
-	.profile-copy {
-		min-width: 0;
-		display: flex;
-		flex: 1;
-		flex-direction: column;
-	}
-
-	.profile-copy strong {
-		overflow: hidden;
-		font-size: 13px;
-		color: white;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.profile-copy span {
-		margin-top: 1px;
-		color: rgba(255, 255, 255, 0.6);
-		font-size: 11px;
-	}
+	.profile-copy { min-width: 0; display: flex; flex: 1; flex-direction: column; }
+	.profile-copy strong { font-size: 10px; color: white; }
+	.profile-copy span { color: rgba(255,255,255,0.53); font-size: 7px; }
 
 	.logout {
 		border: 0;
 		background: transparent;
-		color: rgba(255, 255, 255, 0.65);
+		color: rgba(255,255,255,0.7);
 		cursor: pointer;
-		padding: 6px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border-radius: 8px;
-		transition: color 0.15s ease, background 0.15s ease;
+		font-size: 15px;
 	}
 
-	.logout:hover {
-		color: white;
-		background: rgba(255, 255, 255, 0.12);
-	}
-
-	/* =====================================================
-	   MAIN CONTENT
-	===================================================== */
-
+	/* MAIN */
 	.main {
 		width: 100%;
-		max-width: 1080px;
+		max-width: 1500px;
 		margin: 0 auto;
-		padding: 34px clamp(24px, 4vw, 56px) 48px;
+		padding: 34px clamp(30px, 4vw, 65px) 45px;
 	}
-
-	/* =====================================================
-	   TOP BAR
-	===================================================== */
 
 	.topbar {
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
-		gap: 24px;
+		gap: 30px;
 		margin-bottom: 26px;
 	}
 
-	.date {
-		margin: 0 0 6px;
-		color: var(--color-text-subtle, #4b6357);
-		font-size: 12px;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-	}
+	.date { margin: 0 0 5px; color: #85745f; font-size: 11px; }
+	.topbar h1 { margin: 0; font-size: clamp(24px, 2.5vw, 34px); color: #0b3d2b; }
+	.intro { margin: 6px 0 0; color: #72624d; font-size: 13px; }
 
-	/* FRAUNCES DISPLAY SERIF FOR HEADLINE ONLY */
-	.page-title {
-		margin: 0;
-		font-family: var(--font-display, 'Fraunces', Georgia, serif);
-		font-size: clamp(26px, 2.8vw, 36px);
-		color: var(--color-text-primary, #0b3d2b);
-		font-weight: 500;
-		letter-spacing: -0.02em;
-		line-height: 1.1;
-	}
-
-	.intro {
-		margin: 6px 0 0;
-		color: var(--color-text-secondary, #475569);
-		font-size: 14px;
-	}
-
-	.top-actions {
-		display: flex;
-		gap: 12px;
-		align-items: center;
-		flex-shrink: 0;
-	}
+	.top-actions { display: flex; gap: 12px; align-items: center; }
 
 	.btn-primary {
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
-		background: var(--color-brand-primary, #0d5438);
+		background: #0d5438;
 		color: white;
-		padding: 11px 20px;
-		border-radius: var(--radius-md, 12px);
+		padding: 12px 22px;
+		border-radius: 14px;
 		border: none;
-		font-size: 13px;
-		font-weight: 700;
+		font-weight: bold;
 		cursor: pointer;
-		transition: background 0.18s ease, transform 0.18s ease;
-		box-shadow: 0 4px 14px rgba(13, 84, 56, 0.18);
+		transition: 0.2s ease;
+		box-shadow: 0 4px 14px rgba(13,84,56,0.18);
 	}
 
 	.btn-primary:hover {
 		background: #08402a;
-		transform: translateY(-1px);
+		transform: translateY(-2px);
 	}
 
 	.btn-secondary {
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
-		background: var(--color-surface, #ffffff);
-		color: var(--color-text-primary, #174631);
-		padding: 11px 18px;
-		border-radius: var(--radius-md, 12px);
+		background: #f0e6d2;
+		color: #174631;
+		padding: 12px 20px;
+		border-radius: 14px;
 		text-decoration: none;
-		border: 1px solid var(--color-border, #e2e8e0);
-		font-size: 13px;
-		font-weight: 600;
+		border: 1px solid #dfd1b8;
+		font-weight: bold;
 		cursor: pointer;
-		transition: background 0.18s ease, border-color 0.18s ease;
+		transition: 0.2s ease;
 	}
 
-	.btn-secondary:hover {
-		background: var(--color-surface-tinted, #f4f7f2);
-		border-color: #cbdad0;
-	}
+	.btn-secondary:hover { background: #e6d8c0; transform: translateY(-2px); }
 
-	/* =====================================================
-	   CALL STATUS TOAST
-	===================================================== */
-
+	/* CALL BANNER */
 	.call-banner {
 		padding: 14px 20px;
-		border-radius: var(--radius-md, 14px);
+		border-radius: 14px;
 		margin-bottom: 22px;
 		display: flex;
 		align-items: center;
 		gap: 12px;
-		font-weight: 600;
+		font-weight: bold;
 		animation: slideDown 0.3s ease;
 	}
 
-	.call-banner.calling {
-		background: var(--color-warning-bg, #fef4e2);
-		color: var(--color-warning-text, #92400e);
-		border: 1px solid var(--color-warning-border, #fbd38d);
-	}
-
-	.call-banner.success {
-		background: var(--color-success-bg, #e8f7ee);
-		color: var(--color-success-text, #0f6e3c);
-		border: 1px solid var(--color-success-border, #b7e8ca);
-	}
-
-	.call-banner.error {
-		background: var(--color-danger-bg, #fdf0f0);
-		color: var(--color-danger-text, #b91c1c);
-		border: 1px solid var(--color-danger-border, #fecaca);
-	}
-
-	.call-banner p {
-		margin: 0;
-		font-size: 13px;
-	}
+	.call-banner.calling { background: #fff5e0; color: #9c6500; border: 1px solid #ffd880; }
+	.call-banner.success { background: #e3fae8; color: #0f6828; border: 1px solid #a6e8b4; }
+	.call-banner.error { background: #fde8e8; color: #b81414; border: 1px solid #f8b4b4; }
+	.call-banner p { margin: 0; font-size: 13px; }
 
 	@keyframes slideDown {
-		from {
-			opacity: 0;
-			transform: translateY(-8px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
+		from { opacity: 0; transform: translateY(-10px); }
+		to { opacity: 1; transform: translateY(0); }
 	}
 
-	/* =====================================================
-	   METRICS GRID
-	===================================================== */
-
+	/* METRICS */
 	.metrics-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 		gap: 18px;
 		margin-bottom: 26px;
 	}
 
-	/* =====================================================
-	   FILTER BAR
-	===================================================== */
+	.metric-card {
+		background: white;
+		padding: 20px;
+		border-radius: 18px;
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		border: 1px solid #ebe0cc;
+		box-shadow: 0 4px 18px rgba(23,63,49,0.04);
+	}
 
+	.metric-icon {
+		width: 46px;
+		height: 46px;
+		border-radius: 14px;
+		display: grid;
+		place-items: center;
+		font-size: 20px;
+	}
+
+	.metric-icon.total { background: #e8f0fe; color: #1a73e8; }
+	.metric-icon.sentiment { background: #e6f7eb; color: #137333; }
+	.metric-icon.latest { background: #fef7e0; color: #b06000; }
+
+	.metric-card small { display: block; font-size: 10px; color: #8a7a66; letter-spacing: 0.8px; }
+	.metric-card strong { font-size: 22px; color: #173f31; }
+
+	/* FILTER BAR */
 	.filter-bar {
 		display: flex;
 		justify-content: space-between;
@@ -966,35 +792,31 @@
 
 	.filter-pills {
 		display: flex;
-		gap: 6px;
-		background: #eae3d2;
+		gap: 8px;
+		background: #eae0cd;
 		padding: 4px;
-		border-radius: var(--radius-md, 14px);
+		border-radius: 14px;
 	}
 
 	.pill {
 		background: transparent;
 		border: none;
-		padding: 8px 16px;
-		border-radius: var(--radius-sm, 10px);
-		font-weight: 600;
-		color: var(--color-text-secondary, #475569);
+		padding: 8px 18px;
+		border-radius: 10px;
+		font-weight: bold;
+		color: #61523e;
 		cursor: pointer;
-		font-size: 13px;
-		transition: background 0.18s ease, color 0.18s ease;
+		font-size: 12px;
+		transition: 0.2s ease;
 	}
 
 	.pill.active {
-		background: var(--color-surface, #ffffff);
-		color: var(--color-text-primary, #153d30);
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-		font-weight: 700;
+		background: white;
+		color: #173f31;
+		box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 	}
 
-	/* =====================================================
-	   CALLS LIST
-	===================================================== */
-
+	/* CALLS LIST */
 	.calls-list {
 		display: flex;
 		flex-direction: column;
@@ -1002,23 +824,22 @@
 	}
 
 	.call-card {
-		background: var(--color-surface, #ffffff);
-		border-radius: var(--radius-lg, 18px);
-		padding: 22px 24px;
-		border: 1px solid var(--color-border, #e2e8e0);
-		box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.04));
-		transition: transform 0.18s ease, box-shadow 0.18s ease;
+		background: white;
+		border-radius: 20px;
+		padding: 24px;
+		border: 1px solid #ebe0cc;
+		box-shadow: 0 4px 18px rgba(23,63,49,0.04);
+		transition: 0.2s ease;
 	}
 
 	.call-card:hover {
 		transform: translateY(-2px);
-		box-shadow: var(--shadow-md, 0 4px 14px rgba(23, 63, 49, 0.05));
+		box-shadow: 0 8px 24px rgba(23,63,49,0.08);
 	}
 
 	.call-card.distress {
-		border: 1.5px solid #fecaca;
-		border-left: 4px solid var(--color-danger-text, #b91c1c);
-		background: #fffcfc;
+		border-color: #f5c4c4;
+		background: #fffafa;
 	}
 
 	.call-header {
@@ -1038,87 +859,65 @@
 	.call-avatar {
 		width: 44px;
 		height: 44px;
-		border-radius: var(--radius-md, 14px);
-		background: var(--color-success-bg, #e8f7ee);
-		color: var(--color-success-text, #0f6e3c);
+		border-radius: 14px;
+		background: #e8f5ec;
+		color: #0b6845;
 		display: grid;
 		place-items: center;
-		font-size: 18px;
-		flex-shrink: 0;
+		font-size: 20px;
 	}
 
 	.call-avatar.distress {
-		background: var(--color-danger-bg, #fee2e2);
-		color: var(--color-danger-text, #b91c1c);
+		background: #fae8e8;
+		color: #c91818;
 		font-weight: bold;
 	}
 
-	.call-lead h3 {
-		margin: 0;
-		font-size: 17px;
-		font-weight: 700;
-		color: var(--color-text-primary, #153d30);
-	}
-
-	.call-timestamp {
-		color: var(--color-text-secondary, #475569);
-		font-size: 13px;
-		margin-top: 3px;
-		display: block;
-	}
+	.call-lead h3 { margin: 0; font-size: 18px; color: #173f31; }
+	.call-timestamp { color: #85745f; font-size: 12px; margin-top: 3px; display: block; }
 
 	.call-badges {
 		display: flex;
-		align-items: center;
 		gap: 8px;
-		flex-wrap: wrap;
 	}
 
+	.badge {
+		padding: 6px 12px;
+		border-radius: 10px;
+		font-size: 11px;
+		font-weight: bold;
+		text-transform: capitalize;
+	}
+
+	.badge.normal { background: #d7f5dd; color: #0b6845; }
+	.badge.distress { background: #fae0e0; color: #b81414; }
+	.badge.status { background: #f4ecdc; color: #4b3e2d; }
+
 	.call-summary-box {
-		background: var(--color-surface-tinted, #f6f8f5);
-		border: 1px solid var(--color-border-subtle, #e5ede4);
-		border-radius: var(--radius-md, 14px);
+		background: #fdfbf7;
+		border: 1px solid #eee5d3;
+		border-radius: 14px;
 		padding: 14px 18px;
 		margin-bottom: 16px;
 	}
 
-	.summary-title {
-		margin: 0 0 4px;
-		font-size: 11px;
-		font-weight: 700;
-		color: var(--color-text-subtle, #4b6357);
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-	}
-
-	.summary-content {
-		margin: 0;
-		font-size: 14px;
-		color: var(--color-text-body, #1e293b);
-		line-height: 1.55;
-		font-style: italic;
-	}
+	.summary-title { margin: 0 0 4px; font-size: 11px; font-weight: bold; color: #85745f; }
+	.summary-content { margin: 0; font-size: 14px; color: #173f31; line-height: 1.5; font-style: italic; }
 
 	.transcript-box {
-		background: #fdfbf7;
-		border: 1px solid #ebdcc5;
-		border-radius: var(--radius-md, 14px);
+		background: #f3edd8;
+		border-radius: 14px;
 		padding: 16px 20px;
 		margin-bottom: 16px;
 		animation: slideDown 0.2s ease;
 	}
 
-	.transcript-box h4 {
-		margin: 0 0 10px;
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--color-text-primary, #0b3d2b);
-	}
+	.transcript-box h4 { margin: 0 0 10px; font-size: 13px; color: #0b3d2b; }
 
 	.transcript-text {
 		font-size: 13px;
-		color: var(--color-text-body, #1e293b);
-		line-height: 1.65;
+		color: #29382e;
+		line-height: 1.6;
 		white-space: pre-wrap;
 		font-family: inherit;
 	}
@@ -1128,163 +927,58 @@
 		justify-content: space-between;
 		align-items: center;
 		padding-top: 14px;
-		border-top: 1px dashed var(--color-border, #e2e8e0);
+		border-top: 1px dashed #ede2cf;
 	}
 
 	.expand-btn {
 		background: transparent;
 		border: none;
-		color: var(--color-brand-primary, #116240);
-		font-weight: 700;
+		color: #0b6845;
+		font-weight: bold;
 		cursor: pointer;
-		font-size: 13px;
+		font-size: 12px;
 		padding: 6px 0;
-		transition: color 0.15s ease;
 	}
 
-	.expand-btn:hover {
-		color: #074028;
-		text-decoration: underline;
-	}
+	.expand-btn:hover { text-decoration: underline; }
 
 	.call-senior-btn {
 		display: inline-flex;
 		align-items: center;
 		gap: 6px;
-		background: var(--color-brand-accent, #dce76a);
-		color: #143d2e;
+		background: #ebf5b8;
+		color: #174631;
 		text-decoration: none;
 		padding: 8px 16px;
-		border-radius: var(--radius-sm, 10px);
-		font-size: 13px;
-		font-weight: 700;
-		transition: background 0.18s ease, transform 0.18s ease;
+		border-radius: 10px;
+		font-size: 12px;
+		font-weight: bold;
+		transition: 0.2s ease;
 	}
 
-	.call-senior-btn:hover {
-		background: var(--color-brand-accent-hover, #e8f37b);
-		transform: translateY(-1px);
-	}
+	.call-senior-btn:hover { background: #dce76a; }
 
-	/* =====================================================
-	   EMPTY / LOADING STATES
-	===================================================== */
-
-	.loading-state,
-	.empty-card {
-		background: var(--color-surface, #ffffff);
-		border-radius: var(--radius-xl, 20px);
+	/* EMPTY / LOADING */
+	.loading-state, .empty-card {
+		background: white;
+		border-radius: 24px;
 		padding: 60px 30px;
 		text-align: center;
-		border: 1px solid var(--color-border, #e2e8e0);
+		border: 1px solid #ebe0cc;
 	}
 
 	.empty-icon {
 		width: 60px;
 		height: 60px;
-		background: var(--color-success-bg, #e8f7ee);
-		color: var(--color-brand-primary, #0b6845);
-		border-radius: var(--radius-lg, 18px);
+		background: #f4ecdc;
+		color: #0b6845;
+		border-radius: 20px;
 		display: grid;
 		place-items: center;
-		font-size: 26px;
+		font-size: 28px;
 		margin: 0 auto 16px;
 	}
 
-	.empty-card h3 {
-		margin: 0 0 6px;
-		color: var(--color-text-primary, #173f31);
-		font-size: 18px;
-		font-weight: 700;
-	}
-
-	.empty-card p {
-		margin: 0 0 20px;
-		color: var(--color-text-secondary, #475569);
-		font-size: 14px;
-		max-width: 480px;
-		margin-left: auto;
-		margin-right: auto;
-	}
-
-	/* =====================================================
-	   RESPONSIVE
-	===================================================== */
-
-	@media (max-width: 1050px) {
-		.app {
-			grid-template-columns: 210px 1fr;
-		}
-	}
-
-	@media (max-width: 768px) {
-		.app {
-			display: block;
-		}
-
-		.sidebar {
-			position: relative;
-			width: 100%;
-			height: auto;
-			padding: 16px;
-		}
-
-		.care-label,
-		.mini-senior {
-			display: none;
-		}
-
-		nav {
-			margin-top: 14px;
-			display: flex;
-			overflow-x: auto;
-			gap: 8px;
-		}
-
-		.nav-item {
-			flex-shrink: 0;
-		}
-
-		.sidebar-bottom {
-			margin-top: 14px;
-		}
-
-		.profile {
-			padding-top: 10px;
-		}
-
-		.main {
-			padding: 24px 16px 40px;
-		}
-
-		.topbar {
-			align-items: flex-start;
-			flex-direction: column;
-		}
-
-		.top-actions {
-			width: 100%;
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		.btn-primary,
-		.btn-secondary {
-			justify-content: center;
-		}
-
-		.call-header {
-			flex-direction: column;
-		}
-
-		.call-footer {
-			flex-direction: column;
-			align-items: stretch;
-			gap: 10px;
-		}
-
-		.call-senior-btn {
-			justify-content: center;
-		}
-	}
+	.empty-card h3 { margin: 0 0 6px; color: #173f31; }
+	.empty-card p { margin: 0 0 20px; color: #72624d; max-width: 460px; margin-left: auto; margin-right: auto; }
 </style>

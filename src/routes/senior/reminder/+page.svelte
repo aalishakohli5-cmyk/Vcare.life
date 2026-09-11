@@ -493,6 +493,19 @@
 		background: #f9f0e0;
 	}
 
+	:global(body) {
+		margin: 0;
+		background: #f9f0e0;
+		color: #30473a;
+
+		font-family:
+			"Comic Sans MS",
+			"Comic Sans",
+			cursive;
+
+		-webkit-font-smoothing: antialiased;
+	}
+
 	button,
 	input {
 		font: inherit;
